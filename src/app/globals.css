@@ -1,0 +1,392 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ------------------------------------------------------------------
+   RetailHub design tokens. Every value below is copied from
+   docs/Retail-System-Management/RetailHub_Locked_Color_Palette.md
+   (the locked palette). Light and dark are tuned separately; nothing
+   outside this file may introduce a colour.
+
+   Naming: shadcn semantic tokens (background, card, primary, ...) plus the
+   palette's own names (surface-raised, border-subtle, kpi-*, chart-*, ...).
+------------------------------------------------------------------- */
+:root {
+  --radius: 0.625rem;
+
+  /* Foundation (palette §2) */
+  --background: #f5f1e8;
+  --background-subtle: #f9f7f2;
+  --card: #fffcf7; /* surface */
+  --surface-raised: #ffffff;
+  --surface-hover: #f0ede5;
+  --border: #ded8cd;
+  --border-subtle: #eae5dc;
+  --foreground: #252a27; /* text-primary */
+  --text-secondary: #646a65;
+  --text-muted: #8a8e89;
+  --text-on-brand: #fffdf8;
+
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--foreground);
+
+  /* Primary actions (palette §2) */
+  --primary: #2f6655;
+  --primary-hover: #285748;
+  --primary-pressed: #21493d;
+  --primary-subtle: #e2ece6;
+  --primary-foreground: #ffffff;
+  --ring: #72a58e;
+
+  --secondary: var(--surface-hover);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-hover);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--primary-subtle);
+  --accent-foreground: #245445;
+
+  --input: var(--border);
+  --input-background: #ffffff;
+
+  /* Inventory / semantic status (palette §6). Always paired with text or an icon. */
+  --success: #347a55;
+  --warning: #b7791f;
+  --destructive: #b84a42;
+  --info: #397a86;
+  --success-foreground: #ffffff;
+  --warning-foreground: #ffffff;
+  --destructive-foreground: #ffffff;
+  --info-foreground: #ffffff;
+
+  /* Navigation (palette §2) */
+  --sidebar: #fffcf7;
+  --sidebar-foreground: #4f5a54;
+  --sidebar-accent: #e2ece6; /* active background */
+  --sidebar-accent-foreground: #245445; /* active text */
+  --sidebar-primary: #2f6655; /* active indicator */
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-hover: #f0f4ef;
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--ring);
+
+  /* KPI card accent families (palette §4): tinted icon tile + emphasis */
+  --kpi-forest-bg: #e1efe7;
+  --kpi-forest-fg: #2f6655;
+  --kpi-clay-bg: #f8e8de;
+  --kpi-clay-fg: #c7684f;
+  --kpi-sage-bg: #e4efe8;
+  --kpi-sage-fg: #3e7a65;
+  --kpi-ochre-bg: #f9ecd7;
+  --kpi-ochre-fg: #d69a45;
+  --kpi-info-bg: #e2ecec;
+  --kpi-info-fg: #397a73;
+
+  /* Charts (palette §5) */
+  --chart-1: #2f6655; /* Forest */
+  --chart-2: #c7684f; /* Clay */
+  --chart-3: #d69a45; /* Ochre */
+  --chart-4: #8faf9d; /* Sage */
+  --chart-5: #397a73; /* Teal */
+  --chart-6: #876454; /* Cocoa */
+  --chart-grid: #eae5dc;
+  --chart-axis: #646a65;
+  --chart-tooltip: #ffffff;
+
+  /* Inventory donut (palette §7) */
+  --donut-in-stock: #2f6655;
+  --donut-low-stock: #d69a45;
+  --donut-out-of-stock: #c7684f;
+
+  /* Tables (palette §8) */
+  --table-header: #646a65;
+  --table-body: #252a27;
+  --table-hover: #f7f4ed;
+  --table-selected: #edf4ef;
+
+  /* Product image background (palette §9) */
+  --product-bg: #ede6da;
+
+  --shadow-color: 40 20% 20%;
+  --grain-opacity: 0.03;
+}
+
+.dark {
+  /* Foundation (palette §3) */
+  --background: #0b1712;
+  --background-subtle: #101d17;
+  --card: #13241d;
+  --surface-raised: #192c24;
+  --surface-hover: #20362c;
+  --border: #294238;
+  --border-subtle: #20352c;
+  --foreground: #f3eee4;
+  --text-secondary: #c5c9c3;
+  --text-muted: #929b94;
+  --text-on-brand: #0d2119;
+
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--foreground);
+
+  --primary: #67a88b;
+  --primary-hover: #79b89c;
+  --primary-pressed: #579578;
+  --primary-subtle: #203d32;
+  --primary-foreground: #0d2119;
+  --ring: #8cc4aa;
+
+  --secondary: var(--surface-hover);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-hover);
+  --muted-foreground: var(--text-secondary);
+  --accent: #174d3a;
+  --accent-foreground: #f3eee4;
+
+  --input: var(--border);
+  --input-background: var(--background-subtle);
+
+  --success: #62b887;
+  --warning: #e2ad5d;
+  --destructive: #e47770;
+  --info: #68aab4;
+  --success-foreground: #0d2119;
+  --warning-foreground: #0d2119;
+  --destructive-foreground: #0d2119;
+  --info-foreground: #0d2119;
+
+  --sidebar: #0d1c17;
+  --sidebar-foreground: #c5c9c3;
+  --sidebar-accent: #174d3a;
+  --sidebar-accent-foreground: #f3eee4;
+  --sidebar-primary: #67a88b;
+  --sidebar-primary-foreground: #0d2119;
+  --sidebar-hover: #183128;
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--ring);
+
+  --kpi-forest-bg: #183b2e;
+  --kpi-forest-fg: #72b497;
+  --kpi-clay-bg: #402a22;
+  --kpi-clay-fg: #df826c;
+  --kpi-sage-bg: #1c3b30;
+  --kpi-sage-fg: #9bc4ae;
+  --kpi-ochre-bg: #3b3020;
+  --kpi-ochre-fg: #e6b565;
+  --kpi-info-bg: #193637;
+  --kpi-info-fg: #69aaa0;
+
+  --chart-1: #72b497;
+  --chart-2: #df826c;
+  --chart-3: #e6b565;
+  --chart-4: #9bc4ae;
+  --chart-5: #69aaa0;
+  --chart-6: #b98a74;
+  --chart-grid: #294238;
+  --chart-axis: #929b94;
+  --chart-tooltip: #192c24;
+
+  --donut-in-stock: #72b497;
+  --donut-low-stock: #e6b565;
+  --donut-out-of-stock: #df826c;
+
+  --table-header: #929b94;
+  --table-body: #f3eee4;
+  --table-hover: #192c24;
+  --table-selected: #1c382d;
+
+  --product-bg: #292b26;
+
+  --shadow-color: 0 0% 0%;
+  --grain-opacity: 0.05;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-subtle: var(--background-subtle);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-pressed: var(--primary-pressed);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-on-brand: var(--text-on-brand);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
+  --color-chart-tooltip: var(--chart-tooltip);
+  --color-donut-in-stock: var(--donut-in-stock);
+  --color-donut-low-stock: var(--donut-low-stock);
+  --color-donut-out-of-stock: var(--donut-out-of-stock);
+  --color-table-header: var(--table-header);
+  --color-table-body: var(--table-body);
+  --color-table-hover: var(--table-hover);
+  --color-table-selected: var(--table-selected);
+  --color-product-bg: var(--product-bg);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-kpi-forest-bg: var(--kpi-forest-bg);
+  --color-kpi-forest-fg: var(--kpi-forest-fg);
+  --color-kpi-clay-bg: var(--kpi-clay-bg);
+  --color-kpi-clay-fg: var(--kpi-clay-fg);
+  --color-kpi-sage-bg: var(--kpi-sage-bg);
+  --color-kpi-sage-fg: var(--kpi-sage-fg);
+  --color-kpi-ochre-bg: var(--kpi-ochre-bg);
+  --color-kpi-ochre-fg: var(--kpi-ochre-fg);
+  --color-kpi-info-bg: var(--kpi-info-bg);
+  --color-kpi-info-fg: var(--kpi-info-fg);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --font-sans: var(--font-sans-face);
+  --font-display: var(--font-display-face);
+  --font-heading: var(--font-display-face);
+  --font-mono: var(--font-mono-face);
+
+  --shadow-soft: 0 1px 2px hsl(var(--shadow-color) / 0.04),
+    0 2px 8px -2px hsl(var(--shadow-color) / 0.06);
+  --shadow-lifted: 0 2px 4px hsl(var(--shadow-color) / 0.05),
+    0 12px 28px -8px hsl(var(--shadow-color) / 0.14);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+
+  /* Money and counters: stable digit width so numbers never jitter. */
+  .tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* Faint paper grain, tuned per theme (Design direction in the plan). */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  .dark body::before {
+    mix-blend-mode: screen;
+  }
+
+  @media print {
+    body::before {
+      display: none;
+    }
+  }
+}
+
+/* Theme switches crossfade via the View Transitions API (see lib/theme/switch-theme). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.28s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Printing: show only the .print-root portal (labels, receipts), always on a white page. */
+.print-root {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-root,
+  .print-root * {
+    visibility: visible !important;
+  }
+
+  .print-root {
+    display: block;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    background: #fff;
+    color: #000;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+}
