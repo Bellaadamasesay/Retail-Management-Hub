@@ -106,6 +106,11 @@ export function navFor(role: Role | undefined): NavItem[] {
   return navItems.filter((item) => item.anyOf.some((p) => can(role, p)));
 }
 
+/** Roles with a single page get no sidebar, menu button or page search. */
+export function hasNav(role: Role | undefined): boolean {
+  return navFor(role).length > 1;
+}
+
 /** Which sidebar item is active for a path: the most specific match. */
 export function activeNavHref(pathname: string): string | undefined {
   return navItems

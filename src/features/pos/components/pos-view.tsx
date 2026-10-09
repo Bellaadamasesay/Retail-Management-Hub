@@ -6,25 +6,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shell/page-header";
 import { buttonVariants } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useProducts } from "@/features/catalog/api/use-products";
 import { useSales } from "@/features/sales/api/use-sales";
 import { ApiError } from "@/lib/api/client";
 import type { Product, Sale, StockConflict, Variant } from "@/lib/api/types";
 import { useSession } from "@/lib/auth/session-context";
-import { parseLeones } from "@/lib/format/money";
+import { can } from "@/lib/rbac/permissions";
+import { canAccessPath } from "@/lib/rbac/routes";
 import { flyTo } from "@/lib/motion/fly";
-import { canComplete } from "@/lib/pos/cash";
 import { cartTotal } from "@/lib/pos/cart";
 import { appNow } from "@/lib/time";
-import { useMediaQuery } from "@/lib/use-media-query";
 import { fetchAvailability, useCheckout, useStoreSettings } from "../api/use-checkout";
 import { useCart } from "../store/cart-store";
 import { CartPanel } from "./cart-panel";
 import { ConflictDialog } from "./conflict-dialog";
-import { PaymentPanel } from "./payment-panel";
 import { ProductPanel } from "./product-panel";
 import { ReceiptDialog } from "./receipt-dialog";
+import { ScanPanel, type ScanOutcome } from "./scan-panel";
 
 const variantLabel = (v: Pick<Variant, "colour" | "size">) => (v.size === "One size" ? v.colour : `${v.colour} · ${v.size}`);
 
@@ -34,20 +32,18 @@ export function PosView() {
   const settings = useStoreSettings();
   const mySales = useSales(session.sub);
   const checkout = useCheckout();
+  // Roles that may browse the catalog pick from the grid; cashiers scan the item's label.
+  const browse = can(session.role, "products.view");
 
   const lines = useCart((s) => s.lines);
-  const tenderedText = useCart((s) => s.tendered);
   const idempotencyKey = useCart((s) => s.idempotencyKey);
   const add = useCart((s) => s.add);
   const clear = useCart((s) => s.clear);
   const setStock = useCart((s) => s.setStock);
 
-  const wide = useMediaQuery("(min-width: 1280px)");
-  const [paying, setPaying] = useState(false);
   const [receipt, setReceipt] = useState<Sale | null>(null);
   const [conflict, setConflict] = useState<StockConflict | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const amountRef = useRef<HTMLInputElement>(null);
 
   const catalog = useMemo(() => products.data ?? [], [products.data]);
   const byVariant = useMemo(() => {
@@ -57,7 +53,12 @@ export function PosView() {
   }, [catalog]);
 
   const addVariant = useCallback(
-    async (product: Product, variant: Variant, source: Element | null) => {
+    async (product: Product, variant: Variant, source: Element | null): Promise<ScanOutcome> => {
+      // A label can outlive the product: checkout would refuse it, so say so now.
+      if (!product.active) {
+        toast.error(`${product.name} is no longer for sale`, { description: "Put it aside and let your Super Admin know." });
+        return "inactive";
+      }
       // Ask the server how many are really on the shelf right now; fall back to what we last loaded.
       let stock = variant.stock;
       try {
@@ -83,24 +84,38 @@ export function PosView() {
       } else {
         flyTo(source, document.querySelector("[data-cart-target]"));
       }
+      return result.status;
     },
     [add],
   );
 
-  const addByCode = useCallback(
+  const findByCode = useCallback(
     (raw: string) => {
       const code = raw.trim().toLowerCase();
-      const hit = [...byVariant.values()].find((e) => e.variant.sku.toLowerCase() === code);
+      return [...byVariant.values()].find((e) => e.variant.sku.toLowerCase() === code) ?? null;
+    },
+    [byVariant],
+  );
+
+  const addByCode = useCallback(
+    (raw: string) => {
+      const hit = findByCode(raw);
       if (!hit) return false;
       void addVariant(hit.product, hit.variant, null);
       return true;
     },
-    [byVariant, addVariant],
+    [findByCode, addVariant],
   );
 
-  const dialogOpen = paying || receipt !== null || conflict !== null;
+  const dialogOpen = receipt !== null || conflict !== null;
 
-  // Till shortcuts: "/" jumps to search, F2 to the cash field.
+  // The F2 listener outlives renders; always complete the current cart.
+  const completeRef = useRef(completeSale);
+  useEffect(() => {
+    completeRef.current = completeSale;
+  });
+
+  // Till shortcuts: "/" jumps to search (or the item code field), F2 completes the sale.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const typing = event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
@@ -109,34 +124,31 @@ export function PosView() {
         searchRef.current?.focus();
       } else if (event.key === "F2" && !dialogOpen) {
         event.preventDefault();
-        if (wide) amountRef.current?.focus();
-        else if (useCart.getState().lines.length > 0) setPaying(true);
+        completeRef.current();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dialogOpen, wide]);
+  }, [dialogOpen]);
 
   const total = cartTotal(lines);
-  const tendered = tenderedText.trim() === "" ? Number.NaN : parseLeones(tenderedText);
 
-  async function confirmPayment() {
-    if (!canComplete(total, tendered) || checkout.isPending) return;
+  /** Cash only, always the exact amount: nothing to type, and no change to give. */
+  async function completeSale() {
+    if (total <= 0 || checkout.isPending) return;
     const firstToday = !(mySales.data ?? []).some(
       (s) => new Date(s.createdAt).toISOString().slice(0, 10) === appNow().toISOString().slice(0, 10),
     );
     try {
       const sale = await checkout.mutateAsync({
-        input: { lines: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })), tendered },
+        input: { lines: lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })), tendered: total },
         idempotencyKey,
       });
       clear();
-      setPaying(false);
       setReceipt(sale);
       if (firstToday) toast.success("That's your first sale of the day", { description: "A good start." });
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        setPaying(false);
         setConflict(error.body as StockConflict);
       } else {
         toast.error("We couldn't complete that sale", {
@@ -146,15 +158,6 @@ export function PosView() {
               : "Check the connection and try again. The cart is safe and nothing was charged twice.",
         });
       }
-    }
-  }
-
-  function startPayment() {
-    if (wide) {
-      if (canComplete(total, tendered)) void confirmPayment();
-      else amountRef.current?.focus();
-    } else {
-      setPaying(true);
     }
   }
 
@@ -169,36 +172,58 @@ export function PosView() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Sales / POS"
-        description="Search for a product, or select from the list to add items to the cart."
+        description={
+          browse
+            ? "Search for a product, or select from the list to add items to the cart."
+            : "Scan each item to add it to the cart."
+        }
         actions={
-          <Link href="/sales" className={buttonVariants({ variant: "outline", className: "h-11 px-5" })}>
-            <Clock aria-hidden="true" /> Recent Sales
-          </Link>
+          canAccessPath(session.role, "/sales") ? (
+            <Link href="/sales" className={buttonVariants({ variant: "outline", className: "h-11 px-5" })}>
+              <Clock aria-hidden="true" /> Recent Sales
+            </Link>
+          ) : null
         }
       />
 
-      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_22rem_17rem]">
-        <ProductPanel
-          products={catalog}
-          searchRef={searchRef}
-          onPick={(product, variant, source) => void addVariant(product, variant, source)}
-          onExactCode={addByCode}
+      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_28rem]">
+        {browse ? (
+          <ProductPanel
+            products={catalog}
+            searchRef={searchRef}
+            onPick={(product, variant, source) => void addVariant(product, variant, source)}
+            onExactCode={addByCode}
+          />
+        ) : (
+          <ScanPanel
+            inputRef={searchRef}
+            lookup={findByCode}
+            onAdd={(product, variant) => addVariant(product, variant, null)}
+            onUnknown={(code) =>
+              toast.error(`No item has the code “${code}”`, {
+                description: "Check the label and scan again, or ask your Super Admin.",
+              })
+            }
+          />
+        )}
+        <CartPanel
+          productOf={(id) => catalog.find((p) => p.id === id)}
+          onComplete={() => void completeSale()}
+          pending={checkout.isPending}
+          emptyHint={browse ? "Tap a product to start the sale." : "Scan an item to start the sale."}
         />
-        <CartPanel productOf={(id) => catalog.find((p) => p.id === id)} onComplete={startPayment} />
-        {wide ? <PaymentPanel onConfirm={confirmPayment} pending={checkout.isPending} inputRef={amountRef} /> : null}
       </div>
 
-      {/* Narrower tablets: payment opens as a dialog from "Complete Sale". */}
-      <Dialog open={paying && !wide} onOpenChange={setPaying}>
-        <DialogContent className="gap-3 p-4 sm:max-w-sm">
-          <DialogTitle className="sr-only">Payment</DialogTitle>
-          <DialogDescription className="sr-only">Enter the cash received and confirm the sale.</DialogDescription>
-          <PaymentPanel onConfirm={confirmPayment} pending={checkout.isPending} className="border-0 p-0 shadow-none" />
-        </DialogContent>
-      </Dialog>
-
       <ConflictDialog conflict={conflict} lines={lines} onAdjust={adjustToStock} onClose={() => setConflict(null)} />
-      <ReceiptDialog sale={receipt} settings={settings.data} onNewSale={() => setReceipt(null)} />
+      <ReceiptDialog
+        sale={receipt}
+        settings={settings.data}
+        onNewSale={() => {
+          setReceipt(null);
+          // Ready for the next customer's first scan.
+          if (!browse) setTimeout(() => searchRef.current?.focus());
+        }}
+      />
     </div>
   );
 }

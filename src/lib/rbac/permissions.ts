@@ -19,6 +19,9 @@ import type { Role } from "@/lib/api/types";
  * "Create Orders, Record Pay...", Keeper's "Stock Movement Reports ...").
  * They are read as product variants, daily stock takes, payments and stock
  * movement reports, matching the module descriptions in section 3.
+ *
+ * Deliberate departure from the PRD: Cashiers only get POS. Their shift
+ * history, catalog, quantities and shift totals are not available to them.
  */
 export const PERMISSIONS = [
   "dashboard.view",
@@ -69,13 +72,8 @@ export const rolePermissions: Record<Role, readonly Permission[]> = {
     "stocktake.perform",
     "reports.stock_movement",
   ],
-  CASHIER: [
-    "products.view",
-    "inventory.view",
-    "pos.use",
-    "sales.view_own",
-    "reports.shift_totals",
-  ],
+  // Cashiers work the till and nothing else: one page, so the shell drops the sidebar.
+  CASHIER: ["pos.use"],
 };
 
 export function can(role: Role | undefined, permission: Permission): boolean {

@@ -3,8 +3,6 @@ import { addToCart, setQuantity, type AddResult, type CartLine } from "@/lib/pos
 
 interface CartState {
   lines: CartLine[];
-  /** Cash received as typed (Leones), so partial input isn't mangled. */
-  tendered: string;
   /** Sent with checkout so a retry after a dropped connection can't sell twice. */
   idempotencyKey: string;
   add: (line: Omit<CartLine, "quantity">) => { status: AddResult["status"]; available?: number };
@@ -14,14 +12,12 @@ interface CartState {
   clear: () => void;
   /** Puts a basket back (undo for Clear Cart). */
   restore: (lines: CartLine[]) => void;
-  setTendered: (value: string) => void;
 }
 
 const newKey = () => crypto.randomUUID();
 
 export const useCart = create<CartState>((set, get) => ({
   lines: [],
-  tendered: "",
   idempotencyKey: newKey(),
   add: (line) => {
     const result = addToCart(get().lines, line);
@@ -40,7 +36,6 @@ export const useCart = create<CartState>((set, get) => ({
       idempotencyKey: newKey(),
     })),
   remove: (variantId) => set((s) => ({ lines: s.lines.filter((l) => l.variantId !== variantId), idempotencyKey: newKey() })),
-  clear: () => set({ lines: [], tendered: "", idempotencyKey: newKey() }),
+  clear: () => set({ lines: [], idempotencyKey: newKey() }),
   restore: (lines) => set({ lines, idempotencyKey: newKey() }),
-  setTendered: (tendered) => set({ tendered }),
 }));

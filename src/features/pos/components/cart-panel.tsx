@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Minus, Plus, ShoppingBasket, Trash2, X } from "lucide-react";
+import { Banknote, Loader2, Minus, Plus, ShoppingBasket, Trash2, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Money } from "@/components/data/money";
@@ -18,12 +18,16 @@ import { useCart } from "../store/cart-store";
 interface CartPanelProps {
   /** Looks up the product behind a line, for its picture. */
   productOf: (productId: string) => Product | undefined;
-  /** "Complete Sale (Cash Only)". */
+  /** "Complete Sale (Cash Only)": records the sale, paid in exact cash. */
   onComplete: () => void;
+  /** The sale is being recorded: no second tap. */
+  pending: boolean;
+  /** Shown under "Nothing in the cart yet." */
+  emptyHint: string;
 }
 
 /** The current sale: lines with steppers, running total and the big Complete button. */
-export function CartPanel({ productOf, onComplete }: CartPanelProps) {
+export function CartPanel({ productOf, onComplete, pending, emptyHint }: CartPanelProps) {
   const lines = useCart((s) => s.lines);
   const setQuantity = useCart((s) => s.setQuantity);
   const remove = useCart((s) => s.remove);
@@ -77,7 +81,7 @@ export function CartPanel({ productOf, onComplete }: CartPanelProps) {
             <div className="flex flex-col items-center gap-2">
               <ShoppingBasket className="size-8 text-text-muted" aria-hidden="true" />
               <p>Nothing in the cart yet.</p>
-              <p>Tap a product to start the sale.</p>
+              <p>{emptyHint}</p>
             </div>
           </div>
         ) : (
@@ -105,12 +109,20 @@ export function CartPanel({ productOf, onComplete }: CartPanelProps) {
         <Button
           type="button"
           size="lg"
-          disabled={lines.length === 0}
+          disabled={lines.length === 0 || pending}
           onClick={onComplete}
           className="h-14 justify-between px-5 text-base"
         >
           <span className="flex items-center gap-2">
-            <Banknote aria-hidden="true" /> Complete Sale (Cash Only)
+            {pending ? (
+              <>
+                <Loader2 className="animate-spin" aria-hidden="true" /> Completing…
+              </>
+            ) : (
+              <>
+                <Banknote aria-hidden="true" /> Complete Sale (Cash Only)
+              </>
+            )}
           </span>
           <Money amount={total} className="font-semibold" />
         </Button>
