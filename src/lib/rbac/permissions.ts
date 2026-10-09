@@ -20,8 +20,10 @@ import type { Role } from "@/lib/api/types";
  * They are read as product variants, daily stock takes, payments and stock
  * movement reports, matching the module descriptions in section 3.
  *
- * Deliberate departure from the PRD: Cashiers only get POS. Their shift
+ * Deliberate departures from the PRD: Cashiers only get POS. Their shift
  * history, catalog, quantities and shift totals are not available to them.
+ * Inventory Keepers only get Inventory and Products: stock intake, the daily
+ * stock take and stock movement reports are left to the Super Admin.
  */
 export const PERMISSIONS = [
   "dashboard.view",
@@ -64,14 +66,8 @@ export const rolePermissions: Record<Role, readonly Permission[]> = {
     "users.manage",
     "settings.manage",
   ],
-  INVENTORY_KEEPER: [
-    "products.view",
-    "products.edit",
-    "inventory.view",
-    "inventory.intake",
-    "stocktake.perform",
-    "reports.stock_movement",
-  ],
+  // Inventory and Products only: no stock intake, stock takes or reports.
+  INVENTORY_KEEPER: ["products.view", "products.edit", "inventory.view"],
   // Cashiers work the till and nothing else: one page, so the shell drops the sidebar.
   CASHIER: ["pos.use"],
 };
