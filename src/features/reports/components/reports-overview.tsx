@@ -64,7 +64,7 @@ export function ReportsOverview() {
       const dayTotals = totalsOf(salesBetween(all, b.key, b.key));
       return [b.key, dayTotals.count, dayTotals.units, dayTotals.total / 100, b.Shoes / 100, b.Bags / 100, b.Accessories / 100];
     });
-    downloadCsv(`retailhub-sales-${tuple[0]}-to-${tuple[1]}.csv`, [
+    downloadCsv(`danicess-sales-${tuple[0]}-to-${tuple[1]}.csv`, [
       ["Day", "Transactions", "Items sold", "Total (Le)", "Shoes (Le)", "Bags (Le)", "Accessories (Le)"],
       ...days,
     ]);

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductPicture } from "@/features/catalog/components/product-picture";
 import type { Product, Variant } from "@/lib/api/types";
-import { variantLabel } from "@/lib/inventory/stock";
+import { variantColour, variantLabel } from "@/lib/inventory/stock";
 import { cn } from "@/lib/utils";
 
 export type ScanOutcome = "added" | "capped" | "sold-out" | "inactive";
@@ -21,7 +21,7 @@ interface Scanned {
 
 interface ScanPanelProps {
   inputRef: RefObject<HTMLInputElement | null>;
-  /** Exact SKU match only: cashiers scan what the customer brings, they don't browse the catalog. */
+  /** Exact label-code match only: cashiers scan what the customer brings, they don't browse the catalog. */
   lookup: (code: string) => { product: Product; variant: Variant } | null;
   onAdd: (product: Product, variant: Variant) => Promise<ScanOutcome>;
   onUnknown: (code: string) => void;
@@ -37,7 +37,8 @@ const OUT_OF_VIEW_MS = 1000;
 /**
  * Adds items to the cart by their label. Handheld scanners type the code and
  * press Enter into the code field (kept focused); the optional camera decodes
- * QR codes and Code 128 / Code 39 barcodes carrying the variant SKU.
+ * the QR labels printed from the catalog (and Code 128 / Code 39 barcodes)
+ * carrying the variation's label code.
  */
 export function ScanPanel({ inputRef, lookup, onAdd, onUnknown }: ScanPanelProps) {
   const [code, setCode] = useState("");
@@ -105,7 +106,7 @@ export function ScanPanel({ inputRef, lookup, onAdd, onUnknown }: ScanPanelProps
           value={code}
           onChange={(e) => setCode(e.target.value)}
           onKeyDown={(e) => e.key === "Escape" && setCode("")}
-          placeholder="Item code, e.g. OXB-BLA-40"
+          placeholder="Code under the QR on the label, e.g. 100042"
           aria-label="Item code"
           autoComplete="off"
           spellCheck={false}
@@ -118,12 +119,12 @@ export function ScanPanel({ inputRef, lookup, onAdd, onUnknown }: ScanPanelProps
 
       {last ? (
         <div aria-live="polite" className="flex items-center gap-3 rounded-lg bg-surface-hover p-3">
-          <ProductPicture product={last.product} colour={last.variant.colour} className="size-14 shrink-0 rounded-md" />
+          <ProductPicture product={last.product} colour={variantColour(last.variant)} className="size-14 shrink-0 rounded-md" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{last.product.name}</p>
-            <p className="truncate text-xs text-text-secondary">
-              {variantLabel(last.variant)} · <span className="font-mono">{last.variant.sku}</span>
-            </p>
+            {variantLabel(last.variant) ? (
+              <p className="truncate text-xs text-text-secondary">{variantLabel(last.variant)}</p>
+            ) : null}
           </div>
           <div className="text-right">
             <Money amount={last.product.price} className="block text-sm font-semibold" />

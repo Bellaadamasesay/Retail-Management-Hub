@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Ban, Boxes, Download, Eye, MoreHorizontal, PackageCheck, PackagePlus, PackageSearch, Plus, TriangleAlert } from "lucide-react";
+import { Ban, Boxes, Download, Eye, MoreHorizontal, PackageCheck, PackagePlus, PackageSearch, Plus, Printer, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EmptyState } from "@/components/brand/empty-state";
@@ -16,12 +16,13 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePermission } from "@/lib/rbac/use-permission";
+import { PrintLabelsDialog } from "@/features/catalog/components/print-labels-dialog";
 import { ProductPicture } from "@/features/catalog/components/product-picture";
 import { useProducts } from "@/features/catalog/api/use-products";
 import type { Category, Product, Variant } from "@/lib/api/types";
 import { downloadCsv } from "@/lib/csv";
 import { formatDateTime } from "@/lib/format/date";
-import { statusLabel, variantLabel, variantStatus, type StockStatus } from "@/lib/inventory/stock";
+import { itemName, statusLabel, variantColour, variantLabel, variantStatus, type StockStatus } from "@/lib/inventory/stock";
 import { useStaggerIn } from "@/lib/motion/use-stagger-in";
 import { Can } from "@/lib/rbac/can";
 import { cn } from "@/lib/utils";
@@ -52,27 +53,25 @@ const columns: ColumnDef<Row, unknown>[] = [
   {
     id: "product",
     header: "Product",
-    accessorFn: (r) => `${r.product.name} ${variantLabel(r.variant)}`,
+    accessorFn: (r) => r.product.name,
     cell: ({ row }) => (
       <div className="flex items-center gap-3">
-        <ProductPicture product={row.original.product} colour={row.original.variant.colour} className="size-10" />
-        <div className="min-w-0">
-          <Link
-            href={`/products/${row.original.product.id}`}
-            className="block font-medium underline-offset-4 outline-none hover:underline focus-visible:underline"
-          >
-            {row.original.product.name}
-          </Link>
-          <span className="block text-xs text-text-secondary">{variantLabel(row.original.variant)}</span>
-        </div>
+        <ProductPicture product={row.original.product} colour={variantColour(row.original.variant)} className="size-10" />
+        <Link
+          href={`/products/${row.original.product.id}`}
+          className="min-w-0 font-medium underline-offset-4 outline-none hover:underline focus-visible:underline"
+        >
+          {row.original.product.name}
+        </Link>
       </div>
     ),
   },
   {
-    id: "sku",
-    header: "SKU",
-    accessorFn: (r) => r.variant.sku,
-    cell: ({ getValue }) => <span className="font-mono text-xs">{String(getValue())}</span>,
+    id: "variation",
+    header: "Variation",
+    accessorFn: (r) => variantLabel(r.variant),
+    cell: ({ getValue }) =>
+      getValue() ? <span>{String(getValue())}</span> : <span className="text-text-secondary">One version</span>,
   },
   { id: "category", header: "Category", accessorFn: (r) => r.product.category },
   {
@@ -112,11 +111,13 @@ const columns: ColumnDef<Row, unknown>[] = [
 
 function RowActions({ row }: { row: Row }) {
   const canReceive = usePermission("inventory.intake");
+  const canLabel = usePermission("products.edit");
+  const [labelling, setLabelling] = useState(false);
   return (
     <div className="flex justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger
-          aria-label={`Actions for ${row.product.name} ${variantLabel(row.variant)}`}
+          aria-label={`Actions for ${itemName(row.product, row.variant)}`}
           className="grid size-8 place-items-center rounded-md border border-border bg-card outline-none hover:bg-surface-hover focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <MoreHorizontal className="size-4" aria-hidden="true" />
@@ -125,6 +126,11 @@ function RowActions({ row }: { row: Row }) {
           <DropdownMenuItem render={<Link href={`/products/${row.product.id}`} />}>
             <Eye aria-hidden="true" /> View product
           </DropdownMenuItem>
+          {canLabel ? (
+            <DropdownMenuItem onClick={() => setLabelling(true)}>
+              <Printer aria-hidden="true" /> Print labels
+            </DropdownMenuItem>
+          ) : null}
           {canReceive ? (
             <DropdownMenuItem render={<Link href={`/inventory/intake?variant=${row.variant.id}`} />}>
               <PackagePlus aria-hidden="true" /> Receive stock
@@ -132,11 +138,12 @@ function RowActions({ row }: { row: Row }) {
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+      <PrintLabelsDialog product={row.product} only={row.variant.id} open={labelling} onOpenChange={setLabelling} />
     </div>
   );
 }
 
-/** Stock levels per variant (SKU). Everyone with inventory access sees quantities; only Keepers and Admins get actions. */
+/** Stock levels per variation. Everyone with inventory access sees quantities; Keepers and Admins also print labels. */
 export function InventoryView() {
   const products = useProducts();
   const movements = useMovements();
@@ -178,7 +185,7 @@ export function InventoryView() {
       if (status !== "all" && r.status !== status) return false;
       if (!q) return true;
       return (
-        r.product.name.toLowerCase().includes(q) || r.variant.sku.toLowerCase().includes(q)
+        itemName(r.product, r.variant).toLowerCase().includes(q)
       );
     });
   }, [rows, query, category, status]);
@@ -193,12 +200,11 @@ export function InventoryView() {
   }
 
   function exportCsv() {
-    downloadCsv("retailhub-inventory.csv", [
-      ["Product", "Variant", "SKU", "Category", "Stock", "Reorder at", "Status", "Unit price (Le)", "Last updated"],
+    downloadCsv("danicess-inventory.csv", [
+      ["Product", "Variation", "Category", "Stock", "Reorder at", "Status", "Unit price (Le)", "Last updated"],
       ...visible.map((r) => [
         r.product.name,
         variantLabel(r.variant),
-        r.variant.sku,
         r.product.category,
         r.variant.stock,
         r.variant.reorderThreshold,
@@ -231,8 +237,8 @@ export function InventoryView() {
       />
 
       <div ref={cards} className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Products" value={counts.products} icon={Boxes} accent="forest" hint={`${counts.variants} variants across them`} />
-        <StatCard label="In Stock" value={counts.in} icon={PackageCheck} accent="sage" hint="Variants above their reorder point" />
+        <StatCard label="Total Products" value={counts.products} icon={Boxes} accent="forest" hint={`${counts.variants} ${counts.variants === 1 ? "variation" : "variations"} across them`} />
+        <StatCard label="In Stock" value={counts.in} icon={PackageCheck} accent="sage" hint="Variations above their reorder point" />
         <StatCard label="Low Stock" value={counts.low} icon={TriangleAlert} accent="ochre" hint="At or under the reorder point" />
         <StatCard label="Out of Stock" value={counts.out} icon={Ban} accent="clay" hint="Nothing left on the shelf" />
       </div>
@@ -241,7 +247,7 @@ export function InventoryView() {
         <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search products by name or SKU…"
+          placeholder="Search by name, colour, size…"
           aria-label="Search inventory"
           className="min-w-64 flex-1 basis-80"
         />
@@ -279,13 +285,13 @@ export function InventoryView() {
           data={visible}
           selectable
           pageSize={8}
-          itemLabel="variants"
+          itemLabel="variations"
           getRowId={(r) => r.variant.id}
           empty={{
             title: filtered ? "No stock matches those filters" : "No stock to show yet",
             description: filtered
-              ? "Try a different name or SKU, or clear the filters."
-              : "Add a product, then record a delivery to see stock levels here.",
+              ? "Try a different name, or clear the filters."
+              : "Add a product with its quantities to see stock levels here.",
           }}
         />
       )}

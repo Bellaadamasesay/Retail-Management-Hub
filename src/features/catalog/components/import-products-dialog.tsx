@@ -15,7 +15,6 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { downloadCsv } from "@/lib/csv";
 import { useCreateProduct } from "../api/use-product-mutations";
-import { useProducts } from "../api/use-products";
 import {
   IMPORT_COLUMNS,
   parseProductImport,
@@ -30,7 +29,6 @@ interface ImportProductsDialogProps {
 
 /** Bulk-add products from a CSV file: download the template, fill it in, check the preview, import. */
 export function ImportProductsDialog({ open, onOpenChange }: ImportProductsDialogProps) {
-  const products = useProducts();
   const create = useCreateProduct();
   const input = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -49,13 +47,7 @@ export function ImportProductsDialog({ open, onOpenChange }: ImportProductsDialo
   async function onFile(file: File | undefined) {
     if (!file) return;
     setFileName(file.name);
-    const text = await file.text();
-    const catalog = products.data ?? [];
-    setPreview(
-      parseProductImport(text, {
-        existingCodes: catalog.map((p) => p.code),
-      }),
-    );
+    setPreview(parseProductImport(await file.text()));
   }
 
   async function runImport() {
@@ -67,7 +59,7 @@ export function ImportProductsDialog({ open, onOpenChange }: ImportProductsDialo
         added += 1;
       }
       toast.success(`Imported ${added} ${added === 1 ? "product" : "products"}`, {
-        description: "They’re in the catalog with stock at zero, ready for the next intake.",
+        description: "They’re in the catalog with the quantities from the file. Print their labels from each product.",
       });
       reset();
       onOpenChange(false);
@@ -92,14 +84,13 @@ export function ImportProductsDialog({ open, onOpenChange }: ImportProductsDialo
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Import Products</DialogTitle>
           <DialogDescription className="leading-relaxed">
-            Upload a CSV with one product per line. Colours and sizes are expanded into variants,
-            and SKUs are created for you. Prices are in Leones. New products start
-            with no stock; record it through Stock Intake.
+            Upload a CSV with one product per line. Colours and sizes are expanded into
+            variations, each starting with the row’s quantity. Prices are in Leones.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="outline" onClick={() => downloadCsv("retailhub-products-template.csv", TEMPLATE_ROWS)}>
+          <Button variant="outline" onClick={() => downloadCsv("danicess-products-template.csv", TEMPLATE_ROWS)}>
             <Download aria-hidden="true" /> Download template
           </Button>
           <Button onClick={() => input.current?.click()}>
@@ -118,8 +109,8 @@ export function ImportProductsDialog({ open, onOpenChange }: ImportProductsDialo
 
         <p className="text-xs text-text-secondary">
           Columns: <span className="font-mono">{IMPORT_COLUMNS.join(", ")}</span>. Separate colours
-          with <span className="font-mono">|</span> (Black|Tan). Sizes can be a range (36-45), a
-          list (S|M|L) or One size.
+          with <span className="font-mono">|</span> (Black|Tan). Sizes can be a range (36-45) or a
+          list (S|M|L). Leave both empty for a product sold in one version.
         </p>
 
         {preview?.missingColumns.length ? (
@@ -151,7 +142,9 @@ export function ImportProductsDialog({ open, onOpenChange }: ImportProductsDialo
                     </span>
                     <span className="block text-xs text-text-secondary">
                       {row.error ??
-                        `${row.input!.variants.length} variants · code ${row.input!.code}`}
+                        (row.input!.optionTypes.length === 0
+                          ? `One version · ${row.input!.variants[0].stock} in stock`
+                          : `${row.input!.variants.length} variations · ${row.input!.variants[0].stock} of each`)}
                     </span>
                   </span>
                 </li>

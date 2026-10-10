@@ -17,7 +17,7 @@ export async function downloadReceiptPdf(sale: Sale, settings: StoreSettings | u
 
   // Measure first so the page is exactly as tall as the receipt.
   const rows: { left: string; right?: string; bold?: boolean; center?: boolean; gap?: number }[] = [
-    { left: settings?.storeName ?? "RetailHub", bold: true, center: true },
+    { left: settings?.storeName ?? "DaniCess Store", bold: true, center: true },
     ...(settings?.address ? [{ left: settings.address, center: true }] : []),
     ...(settings?.phone ? [{ left: settings.phone, center: true }] : []),
     { left: "", gap: 2 },

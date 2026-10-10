@@ -22,7 +22,7 @@ export function Topbar() {
   const placeholder =
     pathname === "/dashboard"
       ? "Search products, sales, or reports…"
-      : "Search products by name or SKU…";
+      : "Search products by name…";
 
   return (
     <div className="flex h-[4.5rem] shrink-0 items-center gap-4 border-b border-border-subtle px-5 sm:px-8 xl:px-12">

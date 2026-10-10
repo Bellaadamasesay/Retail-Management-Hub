@@ -1,4 +1,4 @@
-/** Domain types shared by the mock API now and the real API client later. Money is integer minor units. */
+/** Domain types shared by the API (src/server) and the UI. Money is integer minor units. */
 
 export type Role = "SUPER_ADMIN" | "INVENTORY_KEEPER" | "CASHIER";
 
@@ -13,9 +13,6 @@ export interface User {
   createdAt: string;
 }
 
-/** A staff entry as seeded in the fixtures; the database adds when the account was created. */
-export type SeedUser = Omit<User, "createdAt">;
-
 /** Just enough to show who did something: safe for every role to read. */
 export interface StaffName {
   id: string;
@@ -27,10 +24,13 @@ export type Category = "Shoes" | "Bags" | "Accessories";
 export interface Variant {
   id: string;
   productId: string;
-  sku: string;
-  colour: string;
-  /** Shoe size, belt size, or "One size". */
-  size: string;
+  /**
+   * Six-digit code carried by the item's QR label: what the till scans. The
+   * app assigns it; nobody types it in or sees it in tables.
+   */
+  code: string;
+  /** One value per variation type, e.g. { Colour: "Black", Size: "40" }. Empty for a product sold in one version. */
+  options: Record<string, string>;
   /** Units currently on the shelf. */
   stock: number;
   /** Alert management when stock falls to or below this. */
@@ -39,8 +39,6 @@ export interface Variant {
 
 export interface Product {
   id: string;
-  /** Short parent code used as the SKU prefix, e.g. "LTB". */
-  code: string;
   name: string;
   category: Category;
   description: string;
@@ -48,6 +46,10 @@ export interface Product {
   price: number;
   /** Cost price in minor units. */
   cost: number;
+  /** Photo snapped with the camera (a data URL in the mock, a storage URL later). Null shows a drawn picture. */
+  image: string | null;
+  /** Variation types in display order, e.g. ["Colour", "Size"]. Empty when the product comes in one version. */
+  optionTypes: string[];
   variants: Variant[];
   /** Inactive products stay in the catalog but cannot be sold. */
   active: boolean;
@@ -118,7 +120,6 @@ export interface StockMovement {
 export interface SaleLine {
   variantId: string;
   name: string;
-  sku: string;
   quantity: number;
   unitPrice: number;
 }
@@ -146,6 +147,7 @@ export interface AuditEntry {
   action:
     | "sale.create"
     | "stock.intake"
+    | "stock.adjust"
     | "stock.take.submit"
     | "stock.take.approve"
     | "stock.take.cancel"
@@ -179,21 +181,23 @@ export interface UserInput {
 export interface VariantInput {
   /** Present when editing an existing variant; absent for a new one. */
   id?: string;
-  sku: string;
-  colour: string;
-  size: string;
+  /** Keyed by the product's optionTypes; empty for a single-version product. */
+  options: Record<string, string>;
+  /** Units on the shelf. On an edit, a change is logged as a stock adjustment. */
+  stock: number;
   reorderThreshold: number;
 }
 
-/** Body for creating or updating a product. Stock is never set here: it moves through intake, stock take and sales. */
+/** Body for creating or updating a product. Variant codes are assigned by the server. */
 export interface ProductInput {
-  code: string;
   name: string;
   category: Category;
   description: string;
   price: number;
   cost: number;
   active: boolean;
+  image: string | null;
+  optionTypes: string[];
   variants: VariantInput[];
 }
 

@@ -27,7 +27,7 @@ import { useStaffName } from "@/features/users/api/use-users";
 import { ApiError } from "@/lib/api/client";
 import type { Product, StockTake, StockTakeLine, Variant, VarianceReason } from "@/lib/api/types";
 import { formatDateTime } from "@/lib/format/date";
-import { variantLabel } from "@/lib/inventory/stock";
+import { itemName, variantColour, variantLabel } from "@/lib/inventory/stock";
 import { formatVariance, lineVariance, REASONS, reasonLabels, statusLabels, summarize } from "@/lib/inventory/variance";
 import { gsap, registerGsap, useGSAP } from "@/lib/motion/register";
 import { duration, ease, REDUCED_MOTION_QUERY } from "@/lib/motion/tokens";
@@ -172,10 +172,7 @@ function CountSheet({ take }: { take: StockTake }) {
         if (filter === "uncounted" && line.counted !== null) return false;
         if (filter === "differences" && (lineVariance(line) ?? 0) === 0) return false;
         if (!q || !entry) return !q;
-        return (
-          entry.product.name.toLowerCase().includes(q) ||
-          entry.variant.sku.toLowerCase().includes(q)
-        );
+        return itemName(entry.product, entry.variant).toLowerCase().includes(q);
       });
   }, [lines, variants, filter, search]);
 
@@ -317,7 +314,7 @@ function CountSheet({ take }: { take: StockTake }) {
             <SearchInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or SKU…"
+              placeholder="Search by name, colour or size…"
               aria-label="Search this count"
               className="min-w-56 flex-1 basis-64"
             />
@@ -356,7 +353,6 @@ function CountSheet({ take }: { take: StockTake }) {
               <thead className="bg-background-subtle text-left text-xs text-table-header">
                 <tr>
                   <th className="px-3 py-2.5 font-medium">Item</th>
-                  <th className="px-3 py-2.5 font-medium">SKU</th>
                   <th className="px-3 py-2.5 text-right font-medium">Expected</th>
                   <th className="px-3 py-2.5 font-medium">Counted</th>
                   <th className="px-3 py-2.5 text-right font-medium">Variance</th>
@@ -366,7 +362,7 @@ function CountSheet({ take }: { take: StockTake }) {
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-text-secondary">
+                    <td colSpan={5} className="px-3 py-10 text-center text-text-secondary">
                       {filter === "uncounted"
                         ? "Everything has been counted."
                         : filter === "differences"
@@ -485,7 +481,7 @@ function CountRow({
 }) {
   const variance = lineVariance(line);
   const differs = variance !== null && variance !== 0;
-  const name = entry ? `${entry.product.name} ${variantLabel(entry.variant)}` : line.variantId;
+  const name = entry ? itemName(entry.product, entry.variant) : line.variantId;
 
   return (
     <tr
@@ -494,14 +490,13 @@ function CountRow({
     >
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          {entry ? <ProductPicture product={entry.product} colour={entry.variant.colour} className="size-9" /> : null}
+          {entry ? <ProductPicture product={entry.product} colour={variantColour(entry.variant)} className="size-9" /> : null}
           <div>
             <p className="font-medium">{entry?.product.name ?? "Unknown item"}</p>
             <p className="text-xs text-text-secondary">{entry ? variantLabel(entry.variant) : ""}</p>
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 font-mono text-xs">{entry?.variant.sku}</td>
       <td className="px-4 py-3 text-right tabular">{line.expected}</td>
       <td className="px-4 py-3">
         {editable ? (

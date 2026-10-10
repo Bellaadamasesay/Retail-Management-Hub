@@ -11,6 +11,7 @@ import { useSales } from "@/features/sales/api/use-sales";
 import { ApiError } from "@/lib/api/client";
 import type { Product, Sale, StockConflict, Variant } from "@/lib/api/types";
 import { useSession } from "@/lib/auth/session-context";
+import { itemName, variantLabel } from "@/lib/inventory/stock";
 import { can } from "@/lib/rbac/permissions";
 import { canAccessPath } from "@/lib/rbac/routes";
 import { flyTo } from "@/lib/motion/fly";
@@ -23,8 +24,6 @@ import { ConflictDialog } from "./conflict-dialog";
 import { ProductPanel } from "./product-panel";
 import { ReceiptDialog } from "./receipt-dialog";
 import { ScanPanel, type ScanOutcome } from "./scan-panel";
-
-const variantLabel = (v: Pick<Variant, "colour" | "size">) => (v.size === "One size" ? v.colour : `${v.colour} · ${v.size}`);
 
 export function PosView() {
   const session = useSession();
@@ -71,14 +70,13 @@ export function PosView() {
         productId: product.id,
         name: product.name,
         label: variantLabel(variant),
-        sku: variant.sku,
         unitPrice: product.price,
         stock,
       });
       if (result.status === "sold-out") {
-        toast.error(`${product.name} (${variantLabel(variant)}) is sold out`, { description: "There are none left on the shelf." });
+        toast.error(`${itemName(product, variant)} is sold out`, { description: "There are none left on the shelf." });
       } else if (result.status === "capped") {
-        toast.warning(`Only ${result.available} of ${product.name} (${variantLabel(variant)}) on the shelf`, {
+        toast.warning(`Only ${result.available} of ${itemName(product, variant)} on the shelf`, {
           description: "That's all of them in the cart.",
         });
       } else {
@@ -92,7 +90,7 @@ export function PosView() {
   const findByCode = useCallback(
     (raw: string) => {
       const code = raw.trim().toLowerCase();
-      return [...byVariant.values()].find((e) => e.variant.sku.toLowerCase() === code) ?? null;
+      return [...byVariant.values()].find((e) => e.variant.code.toLowerCase() === code) ?? null;
     },
     [byVariant],
   );

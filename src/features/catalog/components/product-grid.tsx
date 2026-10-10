@@ -6,7 +6,7 @@ import { StockStatusBadge } from "@/components/data/stock-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { Product } from "@/lib/api/types";
-import { productStatus, totalStock } from "@/lib/inventory/stock";
+import { productStatus, totalStock, variationSummary } from "@/lib/inventory/stock";
 import { ProductPicture } from "./product-picture";
 
 /** Card view of the catalog: a picture, the name, price and stock health. */
@@ -30,7 +30,7 @@ export function ProductGrid({ products }: { products: Product[] }) {
                 {!product.active ? <Badge variant="destructive">Inactive</Badge> : null}
               </div>
               <p className="text-xs text-text-secondary">
-                {product.category} · <span className="font-mono">{product.code}</span>
+                {product.category} · {variationSummary(product)}
               </p>
               <div className="mt-3 flex items-center justify-between gap-2">
                 <Money amount={product.price} className="font-semibold" />

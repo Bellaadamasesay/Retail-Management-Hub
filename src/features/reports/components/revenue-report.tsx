@@ -16,7 +16,7 @@ import { formatDayMonth } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { useLogReportRun } from "../api/use-report-runs";
 import { useReportRange } from "../lib/range";
-import { profitByCategory, revenueByDay, revenueTotals, topSkus, type SkuRow } from "../lib/reports";
+import { profitByCategory, revenueByDay, revenueTotals, topItems, type ItemRow } from "../lib/reports";
 import { ReportFrame } from "./report-frame";
 
 const series: Series[] = [
@@ -30,15 +30,15 @@ const axis = (minor: number) => {
   return v >= 1_000_000 ? `${+(v / 1_000_000).toFixed(1)}M` : v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : String(v);
 };
 
-const columns: ColumnDef<SkuRow, unknown>[] = [
-  { accessorKey: "sku", header: "SKU", cell: ({ getValue }) => <span className="font-mono text-xs">{String(getValue())}</span> },
+const columns: ColumnDef<ItemRow, unknown>[] = [
   {
     id: "item",
     header: "Item",
     accessorFn: (r) => `${r.name} ${r.label}`,
     cell: ({ row }) => (
       <span>
-        {row.original.name} <span className="text-text-secondary">· {row.original.label}</span>
+        {row.original.name}
+        {row.original.label ? <span className="text-text-secondary"> · {row.original.label}</span> : null}
       </span>
     ),
   },
@@ -59,11 +59,11 @@ export function RevenueReport() {
   const days = useMemo(() => revenueByDay(all, catalog, tuple), [all, catalog, tuple]);
   const totals = revenueTotals(days);
   const chart = days.map((d) => ({ label: formatDayMonth(`${d.day}T12:00:00Z`), revenue: d.revenue, profit: d.profit }));
-  const skus = useMemo(() => topSkus(all, catalog, tuple, 10), [all, catalog, tuple]);
+  const best = useMemo(() => topItems(all, catalog, tuple, 10), [all, catalog, tuple]);
   const categories = useMemo(() => profitByCategory(all, catalog, tuple), [all, catalog, tuple]);
 
   async function exportReport() {
-    downloadCsv(`retailhub-revenue-profit-${tuple[0]}-to-${tuple[1]}.csv`, [
+    downloadCsv(`danicess-revenue-profit-${tuple[0]}-to-${tuple[1]}.csv`, [
       ["Day", "Sales", "Items sold", "Revenue (Le)", "Cost of goods (Le)", "Profit (Le)"],
       ...days.map((d) => [d.day, d.sales, d.units, d.revenue / 100, d.cost / 100, d.profit / 100]),
       ["Total", totals.sales, totals.units, totals.revenue / 100, totals.cost / 100, totals.profit / 100],
@@ -107,17 +107,17 @@ export function RevenueReport() {
       </Card>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <section aria-labelledby="skus" className="flex flex-col gap-2">
-          <h2 id="skus" className="font-display text-lg font-semibold">
-            Best sellers by SKU
+        <section aria-labelledby="best-sellers" className="flex flex-col gap-2">
+          <h2 id="best-sellers" className="font-display text-lg font-semibold">
+            Best sellers
           </h2>
           <DataTable
             columns={columns}
-            data={skus}
+            data={best}
             pageSize={5}
             pageSizeOptions={[5, 10]}
-            itemLabel="SKUs"
-            getRowId={(r) => r.sku}
+            itemLabel="items"
+            getRowId={(r) => r.variantId}
             empty={{ title: "No sales in these dates", description: "Pick a wider date range." }}
           />
         </section>

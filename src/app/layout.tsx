@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { MockApiProvider } from "@/components/providers/mock-api-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { MotionProvider } from "@/components/providers/motion-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -33,7 +32,7 @@ const mono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: { default: "RetailHub", template: "%s · RetailHub" },
+  title: { default: "DaniCess Store", template: "%s · DaniCess Store" },
   description: "Stock, sales and store oversight in one place.",
 };
 
@@ -47,11 +46,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
           <MotionProvider>
-            <MockApiProvider>
-              <QueryProvider>
-                <TooltipProvider>{children}</TooltipProvider>
-              </QueryProvider>
-            </MockApiProvider>
+            <QueryProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+            </QueryProvider>
             <Toaster />
           </MotionProvider>
         </ThemeProvider>

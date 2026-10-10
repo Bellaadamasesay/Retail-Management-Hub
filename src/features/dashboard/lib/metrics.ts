@@ -1,7 +1,7 @@
 import { addDays, dayKey, salesBetween, totalsOf, type SalesTotals } from "@/features/sales/lib/sales";
 import type { AuditEntry, Category, Product, Sale } from "@/lib/api/types";
 import { storeHour } from "@/lib/format/date";
-import { variantStatus, type StockStatus } from "@/lib/inventory/stock";
+import { variantColour, variantLabel, variantStatus, type StockStatus } from "@/lib/inventory/stock";
 
 export type DashboardRange = "today" | "week" | "month";
 
@@ -171,11 +171,11 @@ export interface LowStockItem {
   variantId: string;
   productId: string;
   name: string;
+  /** "Black · 42", or "" for a product sold in one version. */
   label: string;
-  sku: string;
   stock: number;
   threshold: number;
-  colour: string;
+  colour?: string;
 }
 
 /** Variants at or under their reorder point, sold-out first, then the lowest stock. */
@@ -189,15 +189,16 @@ export function lowStock(products: readonly Product[], limit = 6): LowStockItem[
         variantId: v.id,
         productId: p.id,
         name: p.name,
-        label: v.size === "One size" ? v.colour : `${v.colour} · ${v.size}`,
-        sku: v.sku,
+        label: variantLabel(v),
         stock: v.stock,
         threshold: v.reorderThreshold,
-        colour: v.colour,
+        colour: variantColour(v),
       });
     }
   }
-  return items.sort((a, b) => a.stock - b.stock || a.sku.localeCompare(b.sku)).slice(0, limit);
+  return items
+    .sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name) || a.label.localeCompare(b.label))
+    .slice(0, limit);
 }
 
 export type ActivityTone = "forest" | "sage" | "info" | "clay";
@@ -205,6 +206,7 @@ export type ActivityTone = "forest" | "sage" | "info" | "clay";
 export const activityTone: Record<AuditEntry["action"], ActivityTone> = {
   "sale.create": "forest",
   "stock.intake": "sage",
+  "stock.adjust": "info",
   "stock.take.submit": "clay",
   "stock.take.approve": "sage",
   "stock.take.cancel": "clay",
@@ -222,6 +224,7 @@ export const activityTone: Record<AuditEntry["action"], ActivityTone> = {
 export const activityTitle: Record<AuditEntry["action"], string> = {
   "sale.create": "Sale completed",
   "stock.intake": "Stock received",
+  "stock.adjust": "Stock changed",
   "stock.take.submit": "Stock take submitted",
   "stock.take.approve": "Stock take approved",
   "stock.take.cancel": "Stock take cancelled",

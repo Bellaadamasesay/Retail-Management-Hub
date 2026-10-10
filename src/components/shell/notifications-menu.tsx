@@ -21,7 +21,7 @@ interface Alert {
 export function NotificationsMenu() {
   const { role } = useSession();
   const products = useProducts();
-  const takes = useStockTakes();
+  const takes = useStockTakes({ enabled: can(role, "stocktake.approve") });
 
   const alerts = useMemo<Alert[]>(() => {
     const result: Alert[] = [];

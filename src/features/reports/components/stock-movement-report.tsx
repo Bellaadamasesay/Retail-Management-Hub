@@ -17,6 +17,7 @@ import { useMovements } from "@/features/inventory/api/use-intakes";
 import type { MovementType } from "@/lib/api/types";
 import { downloadCsv } from "@/lib/csv";
 import { formatDateTime, formatDayMonth } from "@/lib/format/date";
+import { variantColour } from "@/lib/inventory/stock";
 import { cn } from "@/lib/utils";
 import { useLogReportRun } from "../api/use-report-runs";
 import { useReportRange } from "../lib/range";
@@ -78,7 +79,13 @@ export function StockMovementReport() {
           const product = catalog.find((p) => p.id === row.original.productId);
           return (
             <span className="flex items-center gap-2.5">
-              {product ? <ProductPicture product={product} colour={row.original.label.split(" · ")[0]} className="size-8" /> : null}
+              {product ? (
+                <ProductPicture
+                  product={product}
+                  colour={variantColour(product.variants.find((v) => v.id === row.original.movement.variantId))}
+                  className="size-8"
+                />
+              ) : null}
               <span>
                 {row.original.product}
                 <span className="block text-xs text-text-secondary">{row.original.label}</span>
@@ -87,7 +94,6 @@ export function StockMovementReport() {
           );
         },
       },
-      { id: "sku", header: "SKU", accessorFn: (r) => r.sku, cell: ({ getValue }) => <span className="font-mono text-xs">{String(getValue())}</span> },
       {
         id: "type",
         header: "Type",
@@ -109,9 +115,9 @@ export function StockMovementReport() {
   );
 
   function exportCsv() {
-    downloadCsv(`retailhub-stock-movement-${tuple[0]}-to-${tuple[1]}.csv`, [
-      ["Date & time", "Reference", "Product", "Variant", "SKU", "Type", "Quantity", "Balance"],
-      ...rows.map((r) => [r.movement.at, r.movement.reference, r.product, r.label, r.sku, typeBadge[r.movement.type].label, r.movement.quantity, r.movement.balance]),
+    downloadCsv(`danicess-stock-movement-${tuple[0]}-to-${tuple[1]}.csv`, [
+      ["Date & time", "Reference", "Product", "Variation", "Type", "Quantity", "Balance"],
+      ...rows.map((r) => [r.movement.at, r.movement.reference, r.product, r.label, typeBadge[r.movement.type].label, r.movement.quantity, r.movement.balance]),
     ]);
   }
 

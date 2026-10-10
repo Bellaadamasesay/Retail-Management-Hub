@@ -27,12 +27,10 @@ export function LowStockPanel({ products, limit = 6 }: { products: Product[]; li
         const product = byId.get(item.productId)!;
         return (
           <li key={item.variantId} className="flex items-center gap-3 py-2.5">
-            <ProductImage code={product.code} category={product.category} colour={item.colour} className="size-10" sizes="40px" />
+            <ProductImage src={product.image} name={product.name} category={product.category} colour={item.colour} className="size-10" sizes="40px" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{item.name}</span>
-              <span className="block truncate text-xs text-text-secondary">
-                {item.label} · <span className="font-mono">{item.sku}</span>
-              </span>
+              {item.label ? <span className="block truncate text-xs text-text-secondary">{item.label}</span> : null}
             </span>
             <span className="hidden text-right text-xs text-text-secondary sm:block">
               <span className="tabular block font-semibold text-foreground">{item.stock} left</span>

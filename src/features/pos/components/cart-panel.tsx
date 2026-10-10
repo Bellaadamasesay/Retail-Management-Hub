@@ -11,6 +11,7 @@ import { formatMoney, MINOR_FACTOR } from "@/lib/format/money";
 import { gsap, registerGsap, useGSAP } from "@/lib/motion/register";
 import { duration, ease, REDUCED_MOTION_QUERY } from "@/lib/motion/tokens";
 import { useCountUp } from "@/lib/motion/use-count-up";
+import { variantColour } from "@/lib/inventory/stock";
 import { cartTotal, itemCount, lineTotal, type CartLine } from "@/lib/pos/cart";
 import { cn } from "@/lib/utils";
 import { useCart } from "../store/cart-store";
@@ -189,7 +190,7 @@ function CartLineRow({
     >
       <div className="flex min-w-0 items-center gap-2.5">
         {product ? (
-          <ProductPicture product={product} colour={product.variants.find((v) => v.id === line.variantId)?.colour} className="size-10" />
+          <ProductPicture product={product} colour={variantColour(product.variants.find((v) => v.id === line.variantId))} className="size-10" />
         ) : null}
         <div className="min-w-0">
           <p className="line-clamp-2 text-[0.8125rem] leading-tight font-medium">{line.name}</p>

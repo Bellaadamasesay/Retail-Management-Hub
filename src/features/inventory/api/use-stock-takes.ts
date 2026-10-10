@@ -5,10 +5,12 @@ import { api } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/query-keys";
 import type { Category, StockTake, VarianceReason } from "@/lib/api/types";
 
-export function useStockTakes() {
+/** `enabled: false` skips the request (for roles the API wouldn't show stock takes to). */
+export function useStockTakes({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.stockTakes,
     queryFn: () => api<StockTake[]>("/api/stock/takes"),
+    enabled,
   });
 }
 

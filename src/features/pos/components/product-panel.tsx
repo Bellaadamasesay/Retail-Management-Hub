@@ -7,7 +7,7 @@ import { SearchInput } from "@/components/data/search-input";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ProductPicture } from "@/features/catalog/components/product-picture";
 import type { Category, Product, Variant } from "@/lib/api/types";
-import { totalStock, variantLabel } from "@/lib/inventory/stock";
+import { itemName, totalStock, variantColour, variantLabel } from "@/lib/inventory/stock";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES: ("All" | Category)[] = ["All", "Shoes", "Bags", "Accessories"];
@@ -17,7 +17,7 @@ interface ProductPanelProps {
   searchRef: RefObject<HTMLInputElement | null>;
   /** Called with the chosen variant and the element to fly from. */
   onPick: (product: Product, variant: Variant, source: Element | null) => void;
-  /** Enter in the search box with an exact SKU adds that variant straight away. */
+  /** Enter in the search box with an exact label code (a handheld scan) adds that variation straight away. */
   onExactCode: (code: string) => boolean;
 }
 
@@ -33,11 +33,7 @@ export function ProductPanel({ products, searchRef, onPick, onExactCode }: Produ
       .filter((p) => p.active)
       .filter((p) => category === "All" || p.category === category)
       .filter(
-        (p) =>
-          !q ||
-          p.name.toLowerCase().includes(q) ||
-          p.code.toLowerCase().includes(q) ||
-          p.variants.some((v) => v.sku.toLowerCase().includes(q)),
+        (p) => !q || p.name.toLowerCase().includes(q) || p.variants.some((v) => itemName(p, v).toLowerCase().includes(q)),
       );
   }, [products, query, category]);
 
@@ -87,7 +83,7 @@ export function ProductPanel({ products, searchRef, onPick, onExactCode }: Produ
 
       {visible.length === 0 ? (
         <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-text-secondary">
-          Nothing matches &ldquo;{query}&rdquo;. Try a name or SKU.
+          Nothing matches &ldquo;{query}&rdquo;. Try a name, colour or size.
         </p>
       ) : (
         <ul className="grid grid-cols-2 gap-4 lg:grid-cols-3 min-[1700px]:grid-cols-4">
@@ -139,12 +135,22 @@ function VariantPicker({
   onClose: () => void;
   onPick: (variant: Variant, source: Element | null) => void;
 }) {
-  const [colour, setColour] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
   const preview = useRef<HTMLSpanElement>(null);
 
-  const colours = product ? [...new Set(product.variants.map((v) => v.colour))] : [];
-  const activeColour = colour && colours.includes(colour) ? colour : (colours.find((c) => product?.variants.some((v) => v.colour === c && v.stock > 0)) ?? colours[0]);
-  const options = product?.variants.filter((v) => v.colour === activeColour) ?? [];
+  // With two or more variation types, the first one (usually colour) is picked first,
+  // then the rest; with one type every variation is a button straight away.
+  const types = product?.optionTypes ?? [];
+  const groupType = types.length > 1 ? types[0] : null;
+  const rest = groupType ? types.slice(1) : types;
+  const groups = product && groupType ? [...new Set(product.variants.map((v) => v.options[groupType]))] : [];
+  const activeGroup =
+    chosen && groups.includes(chosen)
+      ? chosen
+      : (groups.find((g) => product?.variants.some((v) => v.options[groupType!] === g && v.stock > 0)) ?? groups[0]);
+  const options = product?.variants.filter((v) => !groupType || v.options[groupType] === activeGroup) ?? [];
+  const optionLabel = (v: Variant) => rest.map((t) => v.options[t]).join(" · ");
+  const shownColour = variantColour(options[0]);
 
   return (
     <Dialog open={product !== null} onOpenChange={(open) => !open && onClose()}>
@@ -153,38 +159,40 @@ function VariantPicker({
           <>
             <div className="flex items-center gap-3">
               <span ref={preview} className="contents">
-                <ProductPicture product={product} colour={activeColour} className="size-16" />
+                <ProductPicture product={product} colour={shownColour} className="size-16" />
               </span>
               <div>
                 <DialogTitle className="font-display text-xl">{product.name}</DialogTitle>
                 <DialogDescription>
-                  <Money amount={product.price} /> · choose a colour and size
+                  <Money amount={product.price} /> · choose the {types.map((t) => t.toLowerCase()).join(" and ")}
                 </DialogDescription>
               </div>
             </div>
-            <div role="radiogroup" aria-label="Colour" className="flex flex-wrap gap-2">
-              {colours.map((c) => {
-                const left = product.variants.filter((v) => v.colour === c).reduce((n, v) => n + v.stock, 0);
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    role="radio"
-                    aria-checked={c === activeColour}
-                    onClick={() => setColour(c)}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                      c === activeColour ? "border-primary bg-primary-subtle font-medium" : "border-border hover:bg-surface-hover",
-                      left === 0 && "opacity-50",
-                    )}
-                  >
-                    {c === activeColour ? <Check className="size-3.5" aria-hidden="true" /> : null}
-                    {c}
-                  </button>
-                );
-              })}
-            </div>
-            <div role="group" aria-label="Size" className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+            {groupType ? (
+              <div role="radiogroup" aria-label={groupType} className="flex flex-wrap gap-2">
+                {groups.map((g) => {
+                  const left = product.variants.filter((v) => v.options[groupType] === g).reduce((n, v) => n + v.stock, 0);
+                  return (
+                    <button
+                      key={g}
+                      type="button"
+                      role="radio"
+                      aria-checked={g === activeGroup}
+                      onClick={() => setChosen(g)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        g === activeGroup ? "border-primary bg-primary-subtle font-medium" : "border-border hover:bg-surface-hover",
+                        left === 0 && "opacity-50",
+                      )}
+                    >
+                      {g === activeGroup ? <Check className="size-3.5" aria-hidden="true" /> : null}
+                      {g}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            <div role="group" aria-label={rest.join(" and ")} className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {options.map((v) => (
                 <button
                   key={v.id}
@@ -194,7 +202,7 @@ function VariantPicker({
                   aria-label={`${variantLabel(v)}, ${v.stock === 0 ? "sold out" : `${v.stock} left`}`}
                   className="flex h-14 flex-col items-center justify-center rounded-lg border border-border bg-card text-sm font-medium outline-none transition-[transform,background-color] hover:bg-surface-hover focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
                 >
-                  {v.size}
+                  <span className="max-w-full truncate px-1">{optionLabel(v)}</span>
                   <span className={cn("text-[0.65rem] font-normal", v.stock <= v.reorderThreshold ? "text-warning" : "text-text-secondary")}>
                     {v.stock === 0 ? "sold out" : `${v.stock} left`}
                   </span>

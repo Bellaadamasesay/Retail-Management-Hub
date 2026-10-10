@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
+import { SESSION_COOKIE, verifySession } from "@/lib/auth/session";
 import { canAccessPath, FORBIDDEN_PATH, landingPath } from "@/lib/rbac/routes";
 
 /**
@@ -8,9 +8,9 @@ import { canAccessPath, FORBIDDEN_PATH, landingPath } from "@/lib/rbac/routes";
  * - signed-in users skip /login and land on their role's home
  * - signed-in users on a route their role can't use go to /forbidden
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const session = decodeSession(request.cookies.get(SESSION_COOKIE)?.value);
+  const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
 
   if (pathname === "/login") {
     return session
@@ -37,7 +37,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except API routes, Next internals, the dev-only /design page, images and any
-  // path with a file extension (favicon.ico, mockServiceWorker.js, ...). A character class
+  // path with a file extension (favicon.ico, ...). A character class
   // stands in for an escaped dot because Next strips backslashes from matcher strings.
   matcher: ["/((?!api|_next|design|images|.*[.].*).*)"],
 };

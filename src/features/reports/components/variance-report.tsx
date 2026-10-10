@@ -39,11 +39,11 @@ const columns: ColumnDef<VarianceRow, unknown>[] = [
     accessorFn: (r) => `${r.product} ${r.label}`,
     cell: ({ row }) => (
       <span>
-        {row.original.product} <span className="text-text-secondary">· {row.original.label}</span>
+        {row.original.product}
+        {row.original.label ? <span className="text-text-secondary"> · {row.original.label}</span> : null}
       </span>
     ),
   },
-  { accessorKey: "sku", header: "SKU", cell: ({ getValue }) => <span className="font-mono text-xs">{String(getValue())}</span> },
   { accessorKey: "expected", header: "Expected" },
   { accessorKey: "counted", header: "Counted" },
   {
@@ -84,9 +84,9 @@ export function VarianceReport() {
   const takeCount = new Set(rows.map((r) => r.takeId)).size;
 
   async function exportReport() {
-    downloadCsv(`retailhub-variance-${tuple[0]}-to-${tuple[1]}.csv`, [
-      ["Stock take", "Counted on", "Product", "Variant", "SKU", "Expected", "Counted", "Variance", "Reason", "Value (Le)", "Status"],
-      ...rows.map((r) => [r.reference, r.date, r.product, r.label, r.sku, r.expected, r.counted, r.variance, r.reason ? reasonLabels[r.reason] : "", r.value / 100, r.status === "approved" ? "Approved" : "Pending"]),
+    downloadCsv(`danicess-variance-${tuple[0]}-to-${tuple[1]}.csv`, [
+      ["Stock take", "Counted on", "Product", "Variation", "Expected", "Counted", "Variance", "Reason", "Value (Le)", "Status"],
+      ...rows.map((r) => [r.reference, r.date, r.product, r.label, r.expected, r.counted, r.variance, r.reason ? reasonLabels[r.reason] : "", r.value / 100, r.status === "approved" ? "Approved" : "Pending"]),
     ]);
     try {
       await log.mutateAsync({ name: "Variance Report", type: "Variance", href: "/reports/variance", from: tuple[0], to: tuple[1] });
@@ -134,7 +134,7 @@ export function VarianceReport() {
         data={rows}
         pageSize={8}
         itemLabel="differences"
-        getRowId={(r) => `${r.takeId}-${r.sku}`}
+        getRowId={(r) => `${r.takeId}-${r.variantId}`}
         empty={{ title: "No differences in these dates", description: "Either every count matched the system, or none was submitted in this range." }}
       />
     </ReportFrame>

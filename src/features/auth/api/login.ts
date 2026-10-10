@@ -10,23 +10,9 @@ export type LoginInput =
   | { email: string; password: string; remember: boolean }
   | { userId: string; pin: string };
 
-interface VerifiedUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-}
-
-/** Check the credentials, then start the session (the cookie is set server-side). */
-export async function login(input: LoginInput): Promise<LoginResult> {
-  const user = await api<VerifiedUser>("/api/auth/verify", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-  return api<LoginResult>("/api/auth/session", {
-    method: "POST",
-    body: JSON.stringify({ ...user, remember: "remember" in input ? input.remember : false }),
-  });
+/** Checks the credentials and starts the session (the server sets the signed cookie). */
+export function login(input: LoginInput): Promise<LoginResult> {
+  return api<LoginResult>("/api/auth/login", { method: "POST", body: JSON.stringify(input) });
 }
 
 export interface PinUser {

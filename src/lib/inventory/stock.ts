@@ -28,7 +28,32 @@ export function productStatus(product: Pick<Product, "variants">): StockStatus {
   return product.variants.some((v) => variantStatus(v) !== "in") ? "low" : "in";
 }
 
-/** "Black · 42" / "Tan" for a one-size variant. */
-export function variantLabel(variant: Pick<Variant, "colour" | "size">): string {
-  return variant.size === "One size" ? variant.colour : `${variant.colour} · ${variant.size}`;
+/** "Black · 42", or "" for a product sold in one version. */
+export function variantLabel(variant: Pick<Variant, "options">): string {
+  return Object.values(variant.options).join(" · ");
+}
+
+/** "Oxford Brogue · Black · 42", or just the product name when there are no variations. */
+export function itemName(product: Pick<Product, "name">, variant: Pick<Variant, "options">): string {
+  const label = variantLabel(variant);
+  return label ? `${product.name} · ${label}` : product.name;
+}
+
+/** The variation's colour, if it has one: tints the drawn picture of products without a photo. */
+export function variantColour(variant: Pick<Variant, "options"> | undefined): string | undefined {
+  if (!variant) return undefined;
+  const key = Object.keys(variant.options).find((k) => /^colou?r$/i.test(k));
+  return key ? variant.options[key] : undefined;
+}
+
+/** "2 colours · 6 sizes"; "One version" for a product without variations. */
+export function variationSummary(product: Pick<Product, "optionTypes" | "variants">): string {
+  if (product.optionTypes.length === 0) return "One version";
+  return product.optionTypes
+    .map((type) => {
+      const count = new Set(product.variants.map((v) => v.options[type])).size;
+      const noun = type.toLowerCase();
+      return `${count} ${count === 1 ? noun : noun.endsWith("s") ? noun : `${noun}s`}`;
+    })
+    .join(" · ");
 }

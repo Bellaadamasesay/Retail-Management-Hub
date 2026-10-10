@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Two overlapping leaf shapes: the RetailHub mark. Colours come from tokens so it works in both themes. */
+/** Two overlapping leaf shapes: the DaniCess Store mark. Colours come from tokens so it works in both themes. */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg
@@ -41,7 +41,7 @@ export function Logo({ className, compact = false, size = "md" }: LogoProps) {
               "font-display font-bold tracking-tight text-foreground",
               large ? "text-[1.65rem]" : "text-xl",
             )}>
-            RetailHub
+            DaniCess Store
           </p>
           <p className={cn("mt-1 text-text-secondary", large ? "text-xs" : "text-[0.65rem]")}>
             Retail Management System

@@ -22,7 +22,7 @@ export function Receipt({ sale, settings, cashierName, className }: ReceiptProps
       className={cn("w-full max-w-[80mm] bg-white p-5 font-mono text-[11px] leading-snug text-black", className)}
     >
       <header className="text-center">
-        <p className="font-display text-base font-bold tracking-tight">{settings?.storeName ?? "RetailHub"}</p>
+        <p className="font-display text-base font-bold tracking-tight">{settings?.storeName ?? "DaniCess Store"}</p>
         {settings?.address ? <p>{settings.address}</p> : null}
         {settings?.phone ? <p>{settings.phone}</p> : null}
       </header>

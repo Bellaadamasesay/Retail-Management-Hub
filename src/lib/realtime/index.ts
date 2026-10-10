@@ -1,8 +1,7 @@
 /**
- * Live updates (new sales, stock changes) for the dashboard. The UI only knows
- * this interface; today it is fed by the mock API through a BroadcastChannel,
- * and when the backend exists this file becomes an SSE or WebSocket client
- * with the same shape.
+ * Live updates (new sales, stock changes) for the dashboard, streamed from the
+ * server over Server-Sent Events (/api/events). The connection opens with the
+ * first listener and closes with the last; the browser reconnects by itself.
  */
 export type RealtimeEvent =
   | { type: "sale.created"; saleId: string; receiptNumber: string; total: number; at: string }
@@ -10,29 +9,28 @@ export type RealtimeEvent =
 
 export type RealtimeHandler = (event: RealtimeEvent) => void;
 
-const CHANNEL = "retailhub-realtime";
 const handlers = new Set<RealtimeHandler>();
-let channel: BroadcastChannel | null = null;
-
-function ensureChannel() {
-  if (channel || typeof BroadcastChannel === "undefined") return;
-  channel = new BroadcastChannel(CHANNEL);
-  // Events from other tabs.
-  channel.onmessage = (message: MessageEvent<RealtimeEvent>) => handlers.forEach((h) => h(message.data));
-}
+let source: EventSource | null = null;
 
 /** Listen for live events. Returns an unsubscribe function. */
 export function subscribe(handler: RealtimeHandler): () => void {
-  ensureChannel();
   handlers.add(handler);
+  if (!source && typeof EventSource !== "undefined") {
+    source = new EventSource("/api/events");
+    source.onmessage = (message: MessageEvent<string>) => {
+      try {
+        const event = JSON.parse(message.data) as RealtimeEvent;
+        handlers.forEach((h) => h(event));
+      } catch {
+        // Not one of ours (e.g. a keep-alive): ignore.
+      }
+    };
+  }
   return () => {
     handlers.delete(handler);
+    if (handlers.size === 0) {
+      source?.close();
+      source = null;
+    }
   };
-}
-
-/** Mock server side: announce an event to this tab's listeners and every other tab. */
-export function publish(event: RealtimeEvent) {
-  ensureChannel();
-  handlers.forEach((h) => h(event));
-  channel?.postMessage(event);
 }

@@ -1,7 +1,8 @@
 import type { Category, Product } from "@/lib/api/types";
+import { itemName } from "@/lib/inventory/stock";
 
 export interface ProductFilters {
-  /** Free text: matches the name, the product code, or any variant SKU. */
+  /** Free text: matches the name or any variation value (e.g. "black", "42"). */
   query: string;
   category: Category | "all";
   status: "all" | "active" | "inactive";
@@ -20,10 +21,6 @@ export function filterProducts(products: readonly Product[], filters: ProductFil
     if (filters.status === "active" && !p.active) return false;
     if (filters.status === "inactive" && p.active) return false;
     if (!q) return true;
-    return (
-      p.name.toLowerCase().includes(q) ||
-      p.code.toLowerCase().includes(q) ||
-      p.variants.some((v) => v.sku.toLowerCase().includes(q))
-    );
+    return p.name.toLowerCase().includes(q) || p.variants.some((v) => itemName(p, v).toLowerCase().includes(q));
   });
 }

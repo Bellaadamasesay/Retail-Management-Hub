@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Pencil, Printer, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -13,6 +13,7 @@ import {
 import type { Product } from "@/lib/api/types";
 import { usePermission } from "@/lib/rbac/use-permission";
 import { DeleteProductDialog } from "./delete-product-dialog";
+import { PrintLabelsDialog } from "./print-labels-dialog";
 
 /**
  * Row "…" menu. Everyone can open a product; Keepers and Admins edit it; only
@@ -22,6 +23,7 @@ export function ProductActions({ product }: { product: Product }) {
   const canEdit = usePermission("products.edit");
   const canDelete = usePermission("products.delete");
   const [confirming, setConfirming] = useState(false);
+  const [labelling, setLabelling] = useState(false);
 
   return (
     <>
@@ -37,6 +39,11 @@ export function ProductActions({ product }: { product: Product }) {
             {canEdit ? <Pencil aria-hidden="true" /> : <Eye aria-hidden="true" />}
             {canEdit ? "View / edit" : "View details"}
           </DropdownMenuItem>
+          {canEdit ? (
+            <DropdownMenuItem onClick={() => setLabelling(true)}>
+              <Printer aria-hidden="true" /> Print labels
+            </DropdownMenuItem>
+          ) : null}
           {canDelete ? (
             <>
               <DropdownMenuSeparator />
@@ -49,6 +56,7 @@ export function ProductActions({ product }: { product: Product }) {
       </DropdownMenu>
 
       <DeleteProductDialog product={product} open={confirming} onOpenChange={setConfirming} />
+      <PrintLabelsDialog product={product} open={labelling} onOpenChange={setLabelling} />
     </>
   );
 }

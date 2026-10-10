@@ -23,6 +23,7 @@ const toneClass: Record<ActivityTone, string> = {
 const icons: Record<AuditEntry["action"], LucideIcon> = {
   "sale.create": Receipt,
   "stock.intake": PackagePlus,
+  "stock.adjust": PackagePlus,
   "stock.take.submit": ClipboardCheck,
   "stock.take.approve": ClipboardCheck,
   "stock.take.cancel": ClipboardCheck,

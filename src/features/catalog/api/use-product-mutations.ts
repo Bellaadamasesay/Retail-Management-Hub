@@ -36,12 +36,12 @@ export function useDeleteProduct() {
   });
 }
 
-/** Undo for a delete: puts the exact product back. */
+/** Undo for a delete: brings the product back as it was. */
 export function useRestoreProduct() {
   const refresh = useRefreshCatalog();
   return useMutation({
     mutationFn: (product: Product) =>
-      api<Product>("/api/products/restore", { method: "POST", body: JSON.stringify(product) }),
+      api<Product>(`/api/products/${product.id}/restore`, { method: "POST" }),
     onSuccess: refresh,
   });
 }

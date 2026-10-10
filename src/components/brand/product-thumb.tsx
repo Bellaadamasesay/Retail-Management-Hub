@@ -39,11 +39,22 @@ export type ProductShape =
   | "sneaker" | "oxford" | "boot" | "heel" | "sandal"
   | "belt" | "cardholder" | "scarf";
 
-const SHAPE_BY_CODE: Record<string, ProductShape> = {
-  OXB: "oxford", SCB: "boot", ELS: "sneaker", SBH: "heel", CSO: "sneaker", LSD: "sandal",
-  LTB: "tote", CBS: "satchel", WKD: "duffel", MCL: "clutch", CBP: "backpack",
-  BLT: "belt", CRH: "cardholder", SSC: "scarf",
-};
+/** Words in a product name that say what to draw, checked in order. */
+const SHAPE_BY_WORD: [RegExp, ProductShape][] = [
+  [/brogue|oxford|loafer|derby/i, "oxford"],
+  [/boot/i, "boot"],
+  [/heel|pump/i, "heel"],
+  [/sandal|slide|flip/i, "sandal"],
+  [/sneaker|trainer|slip-?on|canvas shoe/i, "sneaker"],
+  [/tote|shopper/i, "tote"],
+  [/satchel|crossbody|messenger/i, "satchel"],
+  [/duffel|weekender|holdall/i, "duffel"],
+  [/clutch|purse|wallet/i, "clutch"],
+  [/backpack|rucksack/i, "backpack"],
+  [/belt/i, "belt"],
+  [/card/i, "cardholder"],
+  [/scarf|shawl|wrap/i, "scarf"],
+];
 
 const SHAPE_BY_CATEGORY: Record<Category, ProductShape> = {
   Shoes: "sneaker",
@@ -51,8 +62,8 @@ const SHAPE_BY_CATEGORY: Record<Category, ProductShape> = {
   Accessories: "belt",
 };
 
-export function shapeFor(code: string, category: Category): ProductShape {
-  return SHAPE_BY_CODE[code] ?? SHAPE_BY_CATEGORY[category];
+export function shapeFor(name: string, category: Category): ProductShape {
+  return SHAPE_BY_WORD.find(([pattern]) => pattern.test(name))?.[1] ?? SHAPE_BY_CATEGORY[category];
 }
 
 function art(shape: ProductShape, c: string): ReactNode {

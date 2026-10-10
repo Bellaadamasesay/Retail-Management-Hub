@@ -28,7 +28,7 @@ import type { Role } from "@/lib/api/types";
 export const PERMISSIONS = [
   "dashboard.view",
   "products.view",
-  "products.edit", // create + edit products, variants and SKUs
+  "products.edit", // create + edit products, their variations and stock quantities
   "products.delete",
   "inventory.view", // see quantities
   "inventory.intake", // log stock intake

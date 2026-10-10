@@ -17,7 +17,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Category, Product } from "@/lib/api/types";
 import { formatDateTime } from "@/lib/format/date";
-import { totalStock } from "@/lib/inventory/stock";
+import { totalStock, variationSummary } from "@/lib/inventory/stock";
 import { useFlip } from "@/lib/motion/use-flip";
 import { Can } from "@/lib/rbac/can";
 import { cn } from "@/lib/utils";
@@ -62,12 +62,20 @@ const columns: ColumnDef<Product, unknown>[] = [
       </Link>
     ),
   },
-  {
-    accessorKey: "code",
-    header: "SKU",
-    cell: ({ getValue }) => <span className="font-mono text-xs">{String(getValue())}</span>,
-  },
   { accessorKey: "category", header: "Category" },
+  {
+    id: "variations",
+    header: "Variations",
+    accessorFn: (p) => p.variants.length,
+    cell: ({ row }) => (
+      <span className="text-text-secondary">
+        {variationSummary(row.original)}
+        {row.original.optionTypes.length > 0 ? (
+          <span className="block text-xs">{row.original.variants.length} in all</span>
+        ) : null}
+      </span>
+    ),
+  },
   {
     accessorKey: "price",
     header: "Price",
@@ -165,7 +173,7 @@ export function ProductsView() {
         <SearchInput
           value={filters.query}
           onChange={(e) => update({ query: e.target.value })}
-          placeholder="Search products by name or SKU…"
+          placeholder="Search by name, colour, size…"
           aria-label="Search products"
           className="min-w-64 flex-1 basis-80"
         />
@@ -216,7 +224,7 @@ export function ProductsView() {
             title={hasFilters(filters) ? "No products match those filters" : "Nothing on the shelf yet"}
             description={
               hasFilters(filters)
-                ? "Try a different name or SKU, or clear the filters."
+                ? "Try a different name, or clear the filters."
                 : "Add your first product and it will show up here, ready to sell."
             }
             action={

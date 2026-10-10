@@ -41,7 +41,7 @@ export function ShiftReport() {
   );
 
   async function exportReport() {
-    downloadCsv(`retailhub-my-shifts-${tuple[0]}-to-${tuple[1]}.csv`, [
+    downloadCsv(`danicess-my-shifts-${tuple[0]}-to-${tuple[1]}.csv`, [
       ["Day", "First sale", "Last sale", "Sales", "Items", "Total (Le)", "Cash received (Le)", "Change given (Le)"],
       ...days.map((d) => [d.day, d.firstSale ?? "", d.lastSale ?? "", d.sales, d.units, d.total / 100, d.cashReceived / 100, d.changeGiven / 100]),
     ]);

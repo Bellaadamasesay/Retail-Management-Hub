@@ -7,8 +7,10 @@ import { cn } from "@/lib/utils";
 import { ProductThumb, shapeFor } from "./product-thumb";
 
 interface ProductImageProps {
-  /** Product code, e.g. "LTB": the photo lives at /images/products/ltb.jpg. */
-  code: string;
+  /** The product's photo URL (or data URL); null draws a picture of its shape instead. */
+  src: string | null;
+  /** Picks the drawn shape when there is no photo. */
+  name: string;
   category: Category;
   /** Variant colour, used only by the drawn fallback for products that have no photo yet. */
   colour?: string;
@@ -19,15 +21,15 @@ interface ProductImageProps {
 }
 
 /**
- * A product's photo on the warm product background. Products without a photo
- * (anything added after the seeded catalog) show a drawn picture of their
- * shape instead of a broken image.
+ * A product's photo on the warm product background. Products without a photo,
+ * or whose photo fails to load, show a drawn picture of their shape instead of
+ * a broken image.
  */
-export function ProductImage({ code, category, colour, className, label, sizes = "160px", ...rest }: ProductImageProps) {
-  const [missing, setMissing] = useState(false);
+export function ProductImage({ src, name, category, colour, className, label, sizes = "160px", ...rest }: ProductImageProps) {
+  const [failed, setFailed] = useState<string | null>(null);
 
-  if (missing) {
-    return <ProductThumb shape={shapeFor(code, category)} colour={colour} label={label} className={className} {...rest} />;
+  if (!src || failed === src) {
+    return <ProductThumb shape={shapeFor(name, category)} colour={colour} label={label} className={className} {...rest} />;
   }
   return (
     <span
@@ -38,12 +40,14 @@ export function ProductImage({ code, category, colour, className, label, sizes =
       {...rest}
     >
       <Image
-        src={`/images/products/${code.toLowerCase()}.jpg`}
+        src={src}
         alt=""
         fill
         sizes={sizes}
+        // Photos are small JPEGs served by our API (behind sign-in): use them as they are.
+        unoptimized
         className="object-cover"
-        onError={() => setMissing(true)}
+        onError={() => setFailed(src)}
       />
     </span>
   );

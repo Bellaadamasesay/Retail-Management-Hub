@@ -25,7 +25,7 @@ interface Entry {
   href: string;
 }
 
-/** ⌘K / Ctrl+K palette: jump to any page the role can open, or find a product by name or SKU. */
+/** ⌘K / Ctrl+K palette: jump to any page the role can open, or find a product by name. */
 export function CommandPalette() {
   const open = useShellStore((s) => s.paletteOpen);
   const setOpen = useShellStore((s) => s.setPaletteOpen);
@@ -62,13 +62,7 @@ export function CommandPalette() {
     const found: Entry[] =
       q && can(role, "products.view") && products.data
         ? products.data
-            .filter(
-              (p) =>
-                p.name.toLowerCase().includes(q) ||
-                p.variants.some(
-                  (v) => v.sku.toLowerCase().includes(q),
-                ),
-            )
+            .filter((p) => p.name.toLowerCase().includes(q))
             .slice(0, 6)
             .map((p) => ({
               id: p.id,
@@ -122,7 +116,7 @@ export function CommandPalette() {
       <DialogContent showCloseButton={false} className="gap-0 overflow-hidden p-0 sm:max-w-xl">
         <DialogTitle className="sr-only">Search</DialogTitle>
         <DialogDescription className="sr-only">
-          Jump to a page or find a product by name or SKU.
+          Jump to a page or find a product by name.
         </DialogDescription>
         <div className="flex items-center gap-3 border-b px-4">
           <Search className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
@@ -138,7 +132,7 @@ export function CommandPalette() {
             aria-expanded="true"
             aria-controls="command-list"
             aria-label="Search pages and products"
-            placeholder="Search pages, products or SKUs…"
+            placeholder="Search pages or products…"
             className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-text-muted"
           />
         </div>
@@ -151,7 +145,7 @@ export function CommandPalette() {
         >
           {entries.length === 0 ? (
             <li className="px-3 py-8 text-center text-sm text-text-secondary">
-              Nothing matches &ldquo;{query}&rdquo;. Try a product name or SKU.
+              Nothing matches &ldquo;{query}&rdquo;. Try a product name.
             </li>
           ) : (
             entries.map((entry, index) => {

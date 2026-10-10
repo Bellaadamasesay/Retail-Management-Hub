@@ -1,9 +1,10 @@
+import { jwtVerify, SignJWT } from "jose";
 import type { Role } from "@/lib/api/types";
 
 /**
- * Mock JWT session. The token is an unsigned three-part JWT-shaped string with
- * the role claim the PRD describes; the real backend will issue signed tokens
- * and the proxy/API will verify them. UI checks are UX only.
+ * Signed session (an HS256 JWT in an httpOnly cookie). The proxy reads it to
+ * route people to the right pages; the API re-checks the user in the database
+ * on every request, so a revoked or re-roled account takes effect at once.
  */
 export const SESSION_COOKIE = "rh_session";
 
@@ -17,37 +18,29 @@ export interface Session {
   exp: number;
 }
 
-const b64url = {
-  encode: (value: string) =>
-    btoa(String.fromCharCode(...new TextEncoder().encode(value)))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, ""),
-  decode: (value: string) => {
-    const padded = value.replace(/-/g, "+").replace(/_/g, "/");
-    const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
-    return new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
-  },
-};
+const ROLES: Role[] = ["SUPER_ADMIN", "INVENTORY_KEEPER", "CASHIER"];
 
-export function encodeSession(session: Session): string {
-  const header = b64url.encode(JSON.stringify({ alg: "none", typ: "JWT" }));
-  return `${header}.${b64url.encode(JSON.stringify(session))}.mock`;
+function secret() {
+  const value = process.env.SESSION_SECRET;
+  if (!value || value.length < 32) {
+    throw new Error("SESSION_SECRET must be set to a random string of at least 32 characters.");
+  }
+  return new TextEncoder().encode(value);
 }
 
-/** Returns null for a malformed, tampered-shape or expired token. */
-export function decodeSession(token: string | undefined, nowSeconds = Date.now() / 1000): Session | null {
+export async function signSession(session: Session): Promise<string> {
+  const { sub, exp, ...claims } = session;
+  return new SignJWT(claims).setProtectedHeader({ alg: "HS256" }).setSubject(sub).setExpirationTime(exp).sign(secret());
+}
+
+/** The session in a cookie, or null when it's missing, tampered with or expired. */
+export async function verifySession(token: string | undefined): Promise<Session | null> {
   if (!token) return null;
   try {
-    const [, payload] = token.split(".");
-    const claims = JSON.parse(b64url.decode(payload)) as Partial<Session>;
-    const validRole =
-      claims.role === "SUPER_ADMIN" ||
-      claims.role === "INVENTORY_KEEPER" ||
-      claims.role === "CASHIER";
-    if (!claims.sub || !claims.name || !claims.email || !validRole) return null;
-    if (typeof claims.exp !== "number" || claims.exp <= nowSeconds) return null;
-    return claims as Session;
+    const { payload } = await jwtVerify(token, secret(), { algorithms: ["HS256"] });
+    const { sub, name, email, role, exp } = payload as Partial<Session>;
+    if (!sub || !name || !email || !role || !ROLES.includes(role) || typeof exp !== "number") return null;
+    return { sub, name, email, role, exp };
   } catch {
     return null;
   }

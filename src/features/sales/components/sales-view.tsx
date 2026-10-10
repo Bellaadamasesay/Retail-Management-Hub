@@ -81,7 +81,7 @@ export function SalesView() {
     const q = query.trim().toLowerCase();
     return scoped.filter((s) => {
       if (viewAll && cashier !== "all" && s.cashierId !== cashier) return false;
-      return !q || s.receiptNumber.toLowerCase().includes(q) || s.lines.some((l) => l.name.toLowerCase().includes(q) || l.sku.toLowerCase().includes(q));
+      return !q || s.receiptNumber.toLowerCase().includes(q) || s.lines.some((l) => l.name.toLowerCase().includes(q));
     });
   }, [scoped, query, cashier, viewAll]);
 
@@ -167,7 +167,7 @@ export function SalesView() {
       : `${formatDate(`${range[0]}T12:00:00Z`)} to ${formatDate(`${range[1]}T12:00:00Z`)}`;
 
   function exportCsv() {
-    downloadCsv("retailhub-sales.csv", [
+    downloadCsv("danicess-sales.csv", [
       ["Receipt", "Date & time", "Cashier", "Items", "Total (Le)", "Cash received (Le)", "Change (Le)"],
       ...rows.map((r) => [r.sale.receiptNumber, r.sale.createdAt, r.cashier, r.units, r.sale.total / 100, r.sale.payment.tendered / 100, r.sale.payment.change / 100]),
     ]);

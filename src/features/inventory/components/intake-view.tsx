@@ -19,7 +19,7 @@ import { ApiError } from "@/lib/api/client";
 import type { Product, StockIntake, Variant } from "@/lib/api/types";
 import { formatDateTime } from "@/lib/format/date";
 import { formatMoney, parseLeones } from "@/lib/format/money";
-import { variantLabel } from "@/lib/inventory/stock";
+import { itemName, variantColour, variantLabel } from "@/lib/inventory/stock";
 import { cn } from "@/lib/utils";
 import { useStaffName } from "@/features/users/api/use-users";
 import { useCreateIntake, useIntakes } from "../api/use-intakes";
@@ -91,7 +91,7 @@ export function IntakeView() {
     return [...variants.values()]
       .filter(
         ({ variant, product }) =>
-          product.name.toLowerCase().includes(q) || variant.sku.toLowerCase().includes(q),
+          itemName(product, variant).toLowerCase().includes(q),
       )
       .slice(0, 8);
   }, [query, variants]);
@@ -156,7 +156,7 @@ export function IntakeView() {
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search by name or SKU…"
+                  placeholder="Search by name, colour or size…"
                   aria-label="Find an item to add"
                   className="h-11 pl-10"
                 />
@@ -178,12 +178,10 @@ export function IntakeView() {
                           }}
                           className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm outline-none hover:bg-surface-hover focus-visible:bg-surface-hover"
                         >
-                          <ProductPicture product={product} colour={variant.colour} className="size-9" />
+                          <ProductPicture product={product} colour={variantColour(variant)} className="size-9" />
                           <span className="min-w-0 flex-1">
                             <span className="block font-medium">{product.name}</span>
-                            <span className="block text-xs text-text-secondary">
-                              {variantLabel(variant)} · <span className="font-mono">{variant.sku}</span>
-                            </span>
+                            <span className="block text-xs text-text-secondary">{variantLabel(variant)}</span>
                           </span>
                           <span className="text-xs text-text-secondary">{variant.stock} on shelf</span>
                         </button>
@@ -226,12 +224,10 @@ export function IntakeView() {
                           >
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
-                                <ProductPicture product={entry.product} colour={entry.variant.colour} className="size-9" />
+                                <ProductPicture product={entry.product} colour={variantColour(entry.variant)} className="size-9" />
                                 <div>
                                   <p className="font-medium">{entry.product.name}</p>
-                                  <p className="text-xs text-text-secondary">
-                                    {variantLabel(entry.variant)} · <span className="font-mono">{entry.variant.sku}</span>
-                                  </p>
+                                  <p className="text-xs text-text-secondary">{variantLabel(entry.variant)}</p>
                                 </div>
                               </div>
                             </td>

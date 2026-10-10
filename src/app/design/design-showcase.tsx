@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStaggerIn } from "@/lib/motion/use-stagger-in";
 
 export interface LowStockRow {
-  sku: string;
+  id: string;
   name: string;
   stock: number;
   threshold: number;
@@ -53,13 +53,6 @@ const gallery: [ProductShape, string][] = [
 
 const lowStockColumns: ColumnDef<LowStockRow, unknown>[] = [
   { accessorKey: "name", header: "Product" },
-  {
-    accessorKey: "sku",
-    header: "SKU",
-    cell: ({ getValue }) => (
-      <span className="font-mono text-xs">{String(getValue())}</span>
-    ),
-  },
   {
     accessorKey: "stock",
     header: "On shelf",

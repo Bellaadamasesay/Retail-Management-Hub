@@ -1,5 +1,6 @@
 import { addDays, dayKey, salesBetween } from "@/features/sales/lib/sales";
 import type { Category, Product, Sale, StockMovement, StockTake, VarianceReason } from "@/lib/api/types";
+import { variantLabel } from "@/lib/inventory/stock";
 
 /** Every day from `from` to `to`, inclusive. */
 export function eachDay([from, to]: [string, string]): string[] {
@@ -13,7 +14,7 @@ type Owner = { product: Product; label: string };
 function ownersOf(products: readonly Product[]) {
   return new Map<string, Owner>(
     products.flatMap((p) =>
-      p.variants.map((v) => [v.id, { product: p, label: v.size === "One size" ? v.colour : `${v.colour} · ${v.size}` }] as const),
+      p.variants.map((v) => [v.id, { product: p, label: variantLabel(v) }] as const),
     ),
   );
 }
@@ -71,8 +72,8 @@ export function revenueTotals(rows: readonly RevenueDay[]): RevenueTotals {
   return { ...t, profit, margin: t.revenue > 0 ? Math.round((profit / t.revenue) * 100) : 0 };
 }
 
-export interface SkuRow {
-  sku: string;
+export interface ItemRow {
+  variantId: string;
   name: string;
   label: string;
   units: number;
@@ -80,15 +81,15 @@ export interface SkuRow {
   profit: number;
 }
 
-/** Best sellers by SKU (one row per variant) with their profit. */
-export function topSkus(sales: readonly Sale[], products: readonly Product[], range: [string, string], limit = 10): SkuRow[] {
+/** Best sellers (one row per variation) with their profit. */
+export function topItems(sales: readonly Sale[], products: readonly Product[], range: [string, string], limit = 10): ItemRow[] {
   const owners = ownersOf(products);
-  const rows = new Map<string, SkuRow>();
+  const rows = new Map<string, ItemRow>();
   for (const sale of salesBetween(sales, ...range)) {
     for (const line of sale.lines) {
       const owner = owners.get(line.variantId);
       if (!owner) continue;
-      const row = rows.get(line.variantId) ?? { sku: line.sku, name: owner.product.name, label: owner.label, units: 0, revenue: 0, profit: 0 };
+      const row = rows.get(line.variantId) ?? { variantId: line.variantId, name: owner.product.name, label: owner.label, units: 0, revenue: 0, profit: 0 };
       row.units += line.quantity;
       row.revenue += line.quantity * line.unitPrice;
       row.profit += line.quantity * (line.unitPrice - owner.product.cost);
@@ -125,7 +126,7 @@ export interface VarianceRow {
   status: StockTake["status"];
   product: string;
   label: string;
-  sku: string;
+  variantId: string;
   expected: number;
   counted: number;
   /** Counted minus expected. */
@@ -153,7 +154,7 @@ export function varianceRows(takes: readonly StockTake[], products: readonly Pro
         status: take.status,
         product: owner?.product.name ?? "Unknown item",
         label: owner?.label ?? "",
-        sku: owner?.product.variants.find((v) => v.id === line.variantId)?.sku ?? line.variantId,
+        variantId: line.variantId,
         expected: line.expected,
         counted: line.counted,
         variance,
@@ -162,7 +163,7 @@ export function varianceRows(takes: readonly StockTake[], products: readonly Pro
       });
     }
   }
-  return rows.sort((a, b) => b.date.localeCompare(a.date) || a.sku.localeCompare(b.sku));
+  return rows.sort((a, b) => b.date.localeCompare(a.date) || a.product.localeCompare(b.product) || a.label.localeCompare(b.label));
 }
 
 export interface VarianceTotals {
@@ -196,7 +197,6 @@ export interface MovementRow {
   movement: StockMovement;
   product: string;
   label: string;
-  sku: string;
   productId: string;
 }
 
@@ -220,8 +220,7 @@ export function movementRows(
       return {
         movement,
         product: owner?.p.name ?? "Unknown item",
-        label: owner ? (owner.v.size === "One size" ? owner.v.colour : `${owner.v.colour} · ${owner.v.size}`) : "",
-        sku: owner?.v.sku ?? movement.variantId,
+        label: owner ? variantLabel(owner.v) : "",
         productId: owner?.p.id ?? "",
       };
     })

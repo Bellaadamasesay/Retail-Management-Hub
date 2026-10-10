@@ -2,9 +2,8 @@ export interface CartLine {
   variantId: string;
   productId: string;
   name: string;
-  /** "Black · 42", or just the colour for one-size items. */
+  /** "Black · 42", or "" for a product sold in one version. */
   label: string;
-  sku: string;
   /** Minor units. The server re-prices from the catalog at checkout. */
   unitPrice: number;
   quantity: number;
